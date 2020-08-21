@@ -174,6 +174,18 @@ func Errorw(msg string, keysAndValues ...interface{}) {
 	logger.Errorw(msg, keysAndValues...)
 }
 
+func Fatal(args ...interface{}) {
+	logger.Fatal(args...)
+}
+
+func Fatalf(template string, args ...interface{}) {
+	logger.Fatalf(template, args...)
+}
+
+func Fatalw(msg string, keysAndValues ...interface{}) {
+	logger.Fatalw(msg, keysAndValues...)
+}
+
 func Panic(args ...interface{}) {
 	logger.Panic(args...)
 }
