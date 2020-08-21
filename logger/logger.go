@@ -3,15 +3,12 @@ package logger
 import (
 	"os"
 	"path"
+	"strings"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
-
-// type Logger struct {
-// 	l *zap.SugaredLogger
-// }
 
 var logger *zap.SugaredLogger
 
@@ -25,27 +22,27 @@ const (
 )
 
 const (
-	DebugLevel  = zapcore.DebugLevel
-	InfoLevel   = zapcore.InfoLevel
-	WarnLevel   = zapcore.WarnLevel
-	ErrorLevel  = zapcore.ErrorLevel
-	DPanicLevel = zapcore.DPanicLevel
-	PanicLevel  = zapcore.PanicLevel
-	FatalLevel  = zapcore.FatalLevel
+	DebugLevel  = "debug"
+	InfoLevel   = "info"
+	WarnLevel   = "warn"
+	ErrorLevel  = "error"
+	DPanicLevel = "dpanic"
+	PanicLevel  = "panic"
+	FatalLevel  = "fatal"
 )
 
 type Config struct {
-	IsStdOut   bool          // 是否输出到控制台
-	IsFileOut  bool          // 是否输出到文件
-	Encoder    string        // json输出还是普通输出
-	LEncoder   string        // 输出大小写和颜色
-	Level      zapcore.Level // 输出日志级别
-	FilePath   string        // 日志路径
-	FileName   string        // 日志名字
-	MaxSize    int           // 每个日志文件保存的最大尺寸 单位：MB
-	MaxBackups int           // 日志文件最多保存多少个备份
-	MaxAge     int           // 文件最多保存多少天
-	Compress   bool          // 是否压缩
+	IsStdOut   bool   // 是否输出到控制台
+	IsFileOut  bool   // 是否输出到文件
+	Encoder    string // json输出还是普通输出
+	LEncoder   string // 输出大小写和颜色
+	Level      string // 输出日志级别
+	FilePath   string // 日志路径
+	FileName   string // 日志名字
+	MaxSize    int    // 每个日志文件保存的最大尺寸 单位：MB
+	MaxBackups int    // 日志文件最多保存多少个备份
+	MaxAge     int    // 文件最多保存多少天
+	Compress   bool   // 是否压缩
 }
 
 // InitLogger init logger
@@ -87,9 +84,27 @@ func InitLogger(config *Config) {
 		EncodeName:     zapcore.FullNameEncoder,
 	}
 
+	var level zapcore.Level
+	switch strings.ToUpper(config.Level) {
+	default:
+		level = zapcore.InfoLevel
+	case "DEBUG":
+		level = zapcore.DebugLevel
+	case "INFO":
+		level = zapcore.InfoLevel
+	case "WARN":
+		level = zapcore.WarnLevel
+	case "ERROR":
+		level = zapcore.ErrorLevel
+	case "FATAL":
+		level = zapcore.FatalLevel
+	case "PANIC":
+		level = zapcore.PanicLevel
+	}
+
 	// 设置日志级别
 	atomicLevel := zap.NewAtomicLevel()
-	atomicLevel.SetLevel(config.Level)
+	atomicLevel.SetLevel(level)
 
 	var ws []zapcore.WriteSyncer
 	if config.IsStdOut {
