@@ -213,6 +213,10 @@ func Panicw(msg string, keysAndValues ...interface{}) {
 	logger.Panicw(msg, keysAndValues...)
 }
 
+func init(){
+	NewDevEnv()
+}
+
 func NewDevEnv() {
 	InitLogger(&Config{
 		IsFileOut: false,
