@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	mqurl = "amqp://admin:datatom.com@192.168.50.97:30211/"
+	mqurl = "amqp://admin:datatom.com@192.168.50.92:32432/"
 
 	exchangeKind = "fanout"
 	maxPriority  = 255
@@ -23,11 +23,12 @@ var (
 	routingKey   = "test"
 )
 
+// go test --count=1 -run TestRabbitMQ
 func TestRabbitMQ(t *testing.T) {
 	initMQ()
 
-	// send()
-	receive()
+	send()
+	// receive()
 
 	// 释放连接池中的所有连接
 	defer MQ.Release()
@@ -104,8 +105,8 @@ func send() {
 	notifyClose := rch.NotifyClose(closeChan)
 
 	for i := 0; i < 10; i++ {
+		wg.Add(1)
 		go func(i int) {
-			wg.Add(1)
 			defer wg.Done()
 
 			time.Sleep(time.Duration(i) * time.Second)
