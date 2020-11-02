@@ -205,10 +205,15 @@ func (r *RabbitMQ) ReceiveRouting(rch *amqp.Channel) (msgs <-chan amqp.Delivery,
 		logger.Errorf("QueueBind err:%s", err.Error())
 		return
 	}
+	err = rch.Qos(1, 0, true) // handler msg one by one
+	if err != nil {
+		return
+	}
+
 	msgs, err = rch.Consume(
 		q.Name, // queue
 		"",     // consumer
-		true,   // auto ack
+		false,  // auto ack
 		false,  // exclusive
 		false,  // no local
 		false,  // no wait

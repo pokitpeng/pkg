@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"sync"
 	"testing"
 	"time"
 
@@ -14,7 +13,7 @@ import (
 )
 
 var (
-	mqurl = "amqp://admin:datatom.com@192.168.50.92:32432/"
+	mqurl = "amqp://admin:datatom.com@192.168.50.92:30360/"
 
 	exchangeKind = "fanout"
 	maxPriority  = 255
@@ -27,7 +26,7 @@ var (
 func TestRabbitMQ(t *testing.T) {
 	initMQ()
 
-	send()
+	send(30)
 	// receive()
 
 	// 释放连接池中的所有连接
@@ -63,9 +62,9 @@ func initMQ() {
 
 	// 创建一个连接池： 初始化5，最大空闲连接是20，最大并发连接30
 	poolConfig := &Config{
-		InitialCap: 5,  // 资源池初始连接数
-		MaxIdle:    20, // 最大空闲连接数
-		MaxCap:     30, // 最大并发连接数
+		InitialCap: 10,  // 资源池初始连接数
+		MaxIdle:    10, // 最大空闲连接数
+		MaxCap:     20, // 最大并发连接数
 		Factory:    factory,
 		Close:      close,
 		Ping:       ping,
@@ -82,10 +81,7 @@ func initMQ() {
 
 }
 
-func send() {
-	var wg sync.WaitGroup
-	logger.NewDevEnv()
-
+func send(num int) {
 	rc, err := MQ.Get()
 	if err != nil {
 		logger.Errorf("get rabbitmq connection err:%v", err)
@@ -104,26 +100,20 @@ func send() {
 	// if channel err,throw amqp.Error and catch the err
 	notifyClose := rch.NotifyClose(closeChan)
 
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-
-			time.Sleep(time.Duration(i) * time.Second)
-			select {
-			case err := <-notifyClose:
-				logger.Panicf("notifyClose, err:%v", err)
-			default:
-				msg := "hello" + strconv.Itoa(i)
-				err = rabbitmq.PublishRouting(rch, msg)
-				if err != nil {
-					logger.Errorf("PublishRouting err:%v", err)
-				}
+	for i := 0; i < num; i++ {
+		time.Sleep(200 * time.Millisecond)
+		select {
+		case err := <-notifyClose:
+			logger.Panicf("notifyClose, err:%v", err)
+		default:
+			msg := "hello" + strconv.Itoa(i)
+			err = rabbitmq.PublishRouting(rch, msg)
+			if err != nil {
+				logger.Errorf("PublishRouting err:%v", err)
 			}
-		}(i)
+		}
 	}
 
-	wg.Wait()
 	logger.Infof("goroutine finished")
 	time.Sleep(1 * time.Second)
 }
@@ -151,9 +141,10 @@ func receive() {
 	forever := make(chan bool)
 
 	go func() {
-		for d := range msgs {
-			log.Printf(" [x] %s", d.Body)
+		for msg := range msgs {
+			log.Printf(" [x] %s", msg.Body)
 			time.Sleep(200 * time.Millisecond)
+			_ = msg.Ack(false) // 通过ack
 		}
 	}()
 
