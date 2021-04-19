@@ -213,11 +213,12 @@ func Panicw(msg string, keysAndValues ...interface{}) {
 	logger.Panicw(msg, keysAndValues...)
 }
 
-func init(){
-	NewDevEnv()
+func init() {
+	DefaultConfig()
 }
 
-func NewDevEnv() {
+// DefaultConfig 默认配置
+func DefaultConfig() {
 	InitLogger(&Config{
 		IsFileOut: false,
 		IsStdOut:  true,
@@ -226,7 +227,7 @@ func NewDevEnv() {
 	})
 }
 
-func NewDevEnvWithColor() {
+func DefaultConfigWithColor() {
 	InitLogger(&Config{
 		IsFileOut: false,
 		IsStdOut:  true,
