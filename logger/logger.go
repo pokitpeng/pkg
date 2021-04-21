@@ -223,7 +223,7 @@ func DefaultConfig() {
 		IsFileOut: false,
 		IsStdOut:  true,
 		Level:     DebugLevel,
-		Encoder:   NormalEncoder,
+		Encoder:   JsonEncoder,
 	})
 }
 
