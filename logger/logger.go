@@ -10,15 +10,17 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-var logger *zap.SugaredLogger
+type log struct {
+	logger *zap.SugaredLogger
+}
 
 const (
-	JsonEncoder    = "json"
-	NormalEncoder  = "normal"
-	CapitalColor   = "cc"
-	Capital        = "c"
-	LowercaseColor = "lc"
-	Lowercase      = "l"
+	JsonEncoder = iota
+	NormalEncoder
+	CapitalColor
+	Capital
+	LowercaseColor
+	Lowercase
 )
 
 const (
@@ -31,12 +33,17 @@ const (
 	FatalLevel  = "fatal"
 )
 
+// Config 必填参数，终端输出基本配置
 type Config struct {
-	IsStdOut   bool   // 是否输出到控制台
+	IsStdOut bool   // 是否输出到控制台
+	Encoder  int    // json输出还是普通输出
+	LEncoder int    // 输出大小写和颜色
+	Level    string // 输出日志级别
+}
+
+// ConfigFile 选填参数，文件输出配置
+type ConfigFile struct {
 	IsFileOut  bool   // 是否输出到文件
-	Encoder    string // json输出还是普通输出
-	LEncoder   string // 输出大小写和颜色
-	Level      string // 输出日志级别
 	FilePath   string // 日志路径
 	FileName   string // 日志名字
 	MaxSize    int    // 每个日志文件保存的最大尺寸 单位：MB
@@ -45,14 +52,71 @@ type Config struct {
 	Compress   bool   // 是否压缩
 }
 
-// InitLogger init logger
-func InitLogger(config *Config) {
-	hook := lumberjack.Logger{
-		Filename:   path.Join(config.FilePath, config.FileName), // log path
-		MaxSize:    config.MaxSize,                              // 每个日志文件保存的最大尺寸 单位：M
-		MaxBackups: config.MaxBackups,                           // 日志文件最多保存多少个备份
-		MaxAge:     config.MaxAge,                               // 文件最多保存多少天
-		Compress:   config.Compress,                             // 是否压缩
+type Option func(config *ConfigFile)
+
+// IsStdOut 是否输出到文件
+func IsFileOut(b bool) Option {
+	return func(config *ConfigFile) {
+		config.IsFileOut = b
+	}
+}
+
+// FilePath 日志路径
+func FilePath(s string) Option {
+	return func(config *ConfigFile) {
+		// 如果设置了路径就默认开启文件输出
+		config.IsFileOut = true
+		config.FilePath = s
+	}
+}
+
+// FileName 日志名字
+func FileName(s string) Option {
+	return func(config *ConfigFile) {
+		// 	如果设置了日志名字，就默认开启文件输出
+		// 	如果没有给日志路径，默认输出到当前路径
+		config.IsFileOut = true
+		if strings.TrimSpace(config.FilePath) == "" {
+			config.FilePath = "./"
+		}
+		config.FileName = s
+	}
+}
+
+// MaxSize 每个日志文件保存的最大尺寸 单位：MB
+func MaxSize(i int) Option {
+	return func(config *ConfigFile) {
+		config.MaxSize = i
+	}
+}
+
+// MaxBackups 日志文件最多保存多少个备份
+func MaxBackups(i int) Option {
+	return func(config *ConfigFile) {
+		config.MaxBackups = i
+	}
+}
+
+// MaxAge 文件最多保存多少天
+func MaxAge(i int) Option {
+	return func(config *ConfigFile) {
+		config.MaxAge = i
+	}
+}
+
+// Compress 是否压缩日志
+func Compress(b bool) Option {
+	return func(config *ConfigFile) {
+		config.Compress = b
+	}
+}
+
+func NewLogger(config Config, options ...Option) *log {
+	var configFile ConfigFile
+
+	// 应用option
+	for _, option := range options {
+		option(&configFile)
 	}
 
 	var lenc func(l zapcore.Level, enc zapcore.PrimitiveArrayEncoder)
@@ -102,6 +166,14 @@ func InitLogger(config *Config) {
 		level = zapcore.PanicLevel
 	}
 
+	hook := lumberjack.Logger{
+		Filename:   path.Join(configFile.FilePath, configFile.FileName), // log path
+		MaxSize:    configFile.MaxSize,                                  // 每个日志文件保存的最大尺寸 单位：M
+		MaxBackups: configFile.MaxBackups,                               // 日志文件最多保存多少个备份
+		MaxAge:     configFile.MaxAge,                                   // 文件最多保存多少天
+		Compress:   configFile.Compress,                                 // 是否压缩
+	}
+
 	// 设置日志级别
 	atomicLevel := zap.NewAtomicLevel()
 	atomicLevel.SetLevel(level)
@@ -110,7 +182,7 @@ func InitLogger(config *Config) {
 	if config.IsStdOut {
 		ws = append(ws, zapcore.AddSync(os.Stdout))
 	}
-	if config.IsFileOut {
+	if configFile.IsFileOut {
 		ws = append(ws, zapcore.AddSync(&hook))
 	}
 
@@ -134,105 +206,94 @@ func InitLogger(config *Config) {
 	// 设置初始化字段
 	// filed := zap.Fields(zap.String("serviceName", "serviceName"))
 	// 构造日志
-	logger = zap.New(
+	logger := zap.New(
 		core,
 		zap.AddCaller(),      // 堆栈跟踪
 		zap.AddCallerSkip(1), // 行号
 	).Sugar()
+	return &log{logger}
 }
 
-func Debug(args ...interface{}) {
-	logger.Debug(args...)
+func (log *log) Debug(args ...interface{}) {
+	log.logger.Debug(args...)
 }
 
-func Debugf(template string, args ...interface{}) {
-	logger.Debugf(template, args...)
+func (log *log) Debugf(template string, args ...interface{}) {
+	log.logger.Debugf(template, args...)
 }
 
-func Debugw(msg string, keysAndValues ...interface{}) {
-	logger.Debugw(msg, keysAndValues...)
+func (log *log) Debugw(msg string, keysAndValues ...interface{}) {
+	log.logger.Debugw(msg, keysAndValues...)
 }
 
-func Info(args ...interface{}) {
-	logger.Info(args...)
+func (log *log) Print(args ...interface{}) {
+	log.logger.Debug(args...)
 }
 
-func Infof(template string, args ...interface{}) {
-	logger.Infof(template, args...)
+func (log *log) Printf(template string, args ...interface{}) {
+	log.logger.Debugf(template, args...)
 }
 
-func Infow(msg string, keysAndValues ...interface{}) {
-	logger.Infow(msg, keysAndValues...)
+func (log *log) Printw(msg string, keysAndValues ...interface{}) {
+	log.logger.Debugw(msg, keysAndValues...)
 }
 
-func Warn(args ...interface{}) {
-	logger.Warn(args...)
+func (log *log) Info(args ...interface{}) {
+	log.logger.Info(args...)
 }
 
-func Warnf(template string, args ...interface{}) {
-	logger.Warnf(template, args...)
+func (log *log) Infof(template string, args ...interface{}) {
+	log.logger.Infof(template, args...)
 }
 
-func Warnw(msg string, keysAndValues ...interface{}) {
-	logger.Warnw(msg, keysAndValues...)
+func (log *log) Infow(msg string, keysAndValues ...interface{}) {
+	log.logger.Infow(msg, keysAndValues...)
 }
 
-func Error(args ...interface{}) {
-	logger.Error(args...)
+func (log *log) Warn(args ...interface{}) {
+	log.logger.Warn(args...)
 }
 
-func Errorf(template string, args ...interface{}) {
-	logger.Errorf(template, args...)
+func (log *log) Warnf(template string, args ...interface{}) {
+	log.logger.Warnf(template, args...)
 }
 
-func Errorw(msg string, keysAndValues ...interface{}) {
-	logger.Errorw(msg, keysAndValues...)
+func (log *log) Warnw(msg string, keysAndValues ...interface{}) {
+	log.logger.Warnw(msg, keysAndValues...)
 }
 
-func Fatal(args ...interface{}) {
-	logger.Fatal(args...)
+func (log *log) Error(args ...interface{}) {
+	log.logger.Error(args...)
 }
 
-func Fatalf(template string, args ...interface{}) {
-	logger.Fatalf(template, args...)
+func (log *log) Errorf(template string, args ...interface{}) {
+	log.logger.Errorf(template, args...)
 }
 
-func Fatalw(msg string, keysAndValues ...interface{}) {
-	logger.Fatalw(msg, keysAndValues...)
+func (log *log) Errorw(msg string, keysAndValues ...interface{}) {
+	log.logger.Errorw(msg, keysAndValues...)
 }
 
-func Panic(args ...interface{}) {
-	logger.Panic(args...)
+func (log *log) Fatal(args ...interface{}) {
+	log.logger.Fatal(args...)
 }
 
-func Panicf(template string, args ...interface{}) {
-	logger.Panicf(template, args...)
+func (log *log) Fatalf(template string, args ...interface{}) {
+	log.logger.Fatalf(template, args...)
 }
 
-func Panicw(msg string, keysAndValues ...interface{}) {
-	logger.Panicw(msg, keysAndValues...)
+func (log *log) Fatalw(msg string, keysAndValues ...interface{}) {
+	log.logger.Fatalw(msg, keysAndValues...)
 }
 
-func init() {
-	DefaultConfig()
+func (log *log) Panic(args ...interface{}) {
+	log.logger.Panic(args...)
 }
 
-// DefaultConfig 默认配置
-func DefaultConfig() {
-	InitLogger(&Config{
-		IsFileOut: false,
-		IsStdOut:  true,
-		Level:     DebugLevel,
-		Encoder:   JsonEncoder,
-	})
+func (log *log) Panicf(template string, args ...interface{}) {
+	log.logger.Panicf(template, args...)
 }
 
-func DefaultConfigWithColor() {
-	InitLogger(&Config{
-		IsFileOut: false,
-		IsStdOut:  true,
-		Level:     DebugLevel,
-		Encoder:   NormalEncoder,
-		LEncoder:  CapitalColor,
-	})
+func (log *log) Panicw(msg string, keysAndValues ...interface{}) {
+	log.logger.Panicw(msg, keysAndValues...)
 }

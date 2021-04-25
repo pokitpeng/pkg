@@ -2,61 +2,128 @@ package logger
 
 import (
 	"testing"
+	"time"
 )
 
-func TestLogger(t *testing.T) {
-	InitLogger(&Config{
-		IsFileOut:  false,
-		IsStdOut:   true,
-		Level:      DebugLevel,
-		Encoder:    NormalEncoder,
-		LEncoder:   CapitalColor,
-		FilePath:   `E:\tmp`,
-		FileName:   `test.log`,
-		MaxSize:    1,
-		MaxBackups: 3,
-		MaxAge:     30,
-		Compress:   true,
+// go test -timeout 30s -v -count=1 -run ^TestNewLoggerBase$ .
+func TestNewLoggerBase(t *testing.T) {
+	log := NewLogger(Config{
+		IsStdOut: true,
+		Encoder:  JsonEncoder,
+		LEncoder: Lowercase,
+		Level:    "debug",
 	})
+	log.Print("debug message")
+	log.Printf("debug %s", "message")
+	log.Printw("debug message", "model", "user")
 
-	Debug("debug log")
-	Info("info log")
-	Warn("warn log")
-	Error("error log")
-	// Fatal("fatal log")
-	// Panic("info log")
+	log.Debug("debug message")
+	log.Debugf("debug %s", "message")
+	log.Debugw("debug message", "model", "biz")
 
-	Debugf("debug log %v", 1)
-	Infof("info log %v", 1)
-	Warnf("warn log %v", 1)
-	Errorf("error log %v", 1)
-	// Fatalf("fatal log")
-	// Panic("info log")
+	log.Info("info message")
+	log.Infof("info %s", "message")
+	log.Infow("info message", "model", "data")
 
-	Debugw("debug log", "user", "login success")
-	Infow("info log", "user", "logout")
-	Warnw("warn log", "trade", "repeat payment")
-	Errorw("error log", "trade", "incorrect transaction password")
+	log.Warn("warn message")
+	log.Warnf("warn %s", "message")
+	log.Warnw("warn message", "model", "middleware")
 
+	log.Error("warn message")
+	log.Errorf("warn %s", "message")
+	log.Errorw("warn message", "model", "core")
+
+	log = NewLogger(Config{
+		IsStdOut: true,
+		Encoder:  NormalEncoder,
+		LEncoder: LowercaseColor,
+		Level:    "debug",
+	})
+	log.Print("debug message")
+	log.Printf("debug %s", "message")
+	log.Printw("debug message", "model", "user")
+
+	log.Debug("debug message")
+	log.Debugf("debug %s", "message")
+	log.Debugw("debug message", "model", "biz")
+
+	log.Info("info message")
+	log.Infof("info %s", "message")
+	log.Infow("info message", "model", "data")
+
+	log.Warn("warn message")
+	log.Warnf("warn %s", "message")
+	log.Warnw("warn message", "model", "middleware")
+
+	log.Error("warn message")
+	log.Errorf("warn %s", "message")
+	log.Errorw("warn message", "model", "core")
 }
 
-func TestLoggerDefault(t *testing.T) {
-	Debug("debug log")
-	Info("info log")
-	Warn("warn log")
-	Error("error log")
-	// Fatal("fatal log")
-	// Panic("info log")
+// go test -timeout 30s -v -count=1 -run ^TestNewLoggerFile$ .
+func TestNewLoggerFile(t *testing.T) {
+	log := NewLogger(Config{
+		IsStdOut: true,
+		Encoder:  JsonEncoder,
+		LEncoder: Lowercase,
+		Level:    "debug",
+	},
+		IsFileOut(true),
+		FilePath("./"),
+		FileName("test.log"),
+		MaxAge(10),
+		MaxSize(1),
+		MaxBackups(3),
+		Compress(true),
+	)
+	log.Print("debug message")
+	log.Printf("debug %s", "message")
+	log.Printw("debug message", "model", "user")
 
-	Debugf("debug log %v", 1)
-	Infof("info log %v", 1)
-	Warnf("warn log %v", 1)
-	Errorf("error log %v", 1)
-	// Fatalf("fatal log")
-	// Panic("info log")
+	log.Debug("debug message")
+	log.Debugf("debug %s", "message")
+	log.Debugw("debug message", "model", "biz")
 
-	Debugw("debug log", "user", "login success")
-	Infow("info log", "user", "logout")
-	Warnw("warn log", "trade", "repeat payment")
-	Errorw("error log", "trade", "incorrect transaction password")
+	log.Info("info message")
+	log.Infof("info %s", "message")
+	log.Infow("info message", "model", "data")
+
+	log.Warn("warn message")
+	log.Warnf("warn %s", "message")
+	log.Warnw("warn message", "model", "middleware")
+
+	log.Error("warn message")
+	log.Errorf("warn %s", "message")
+	log.Errorw("warn message", "model", "core")
+
+	log.Print("debug message")
+	log.Printf("debug %s", "message")
+	log.Printw("debug message", "model", "user")
+
+	log.Debug("debug message")
+	log.Debugf("debug %s", "message")
+	log.Debugw("debug message", "model", "biz")
+
+	log.Info("info message")
+	log.Infof("info %s", "message")
+	log.Infow("info message", "model", "data")
+
+	log.Warn("warn message")
+	log.Warnf("warn %s", "message")
+	log.Warnw("warn message", "model", "middleware")
+
+	log.Error("warn message")
+	log.Errorf("warn %s", "message")
+	log.Errorw("warn message", "model", "core")
+
+	for i := 0; i < 10000; i++ {
+		log.Info("info message")
+		log.Infof("info %s", "message")
+		log.Infow("info message", "model", "data")
+
+		log.Warn("warn message")
+		log.Warnf("warn %s", "message")
+		log.Warnw("warn message", "model", "middleware")
+		time.Sleep(time.Millisecond * 10)
+	}
 }
