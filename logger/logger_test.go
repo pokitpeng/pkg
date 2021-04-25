@@ -68,13 +68,13 @@ func TestNewLoggerFile(t *testing.T) {
 		LEncoder: Lowercase,
 		Level:    "debug",
 	},
-		IsFileOut(true),
-		FilePath("./"),
-		FileName("test.log"),
-		MaxAge(10),
-		MaxSize(1),
-		MaxBackups(3),
-		Compress(true),
+		WithFileOutOption(true),
+		WithFilePathOption("./"),
+		WithFileNameOption("test.log"),
+		WithMaxAgeOption(10),
+		WithMaxSizeOption(1),
+		WithMaxBackupsOption(3),
+		WithCompressOption(true),
 	)
 	log.Print("debug message")
 	log.Printf("debug %s", "message")

@@ -54,15 +54,15 @@ type ConfigFile struct {
 
 type Option func(config *ConfigFile)
 
-// IsStdOut 是否输出到文件
-func IsFileOut(b bool) Option {
+// WithFileOutOption 是否输出到文件
+func WithFileOutOption(b bool) Option {
 	return func(config *ConfigFile) {
 		config.IsFileOut = b
 	}
 }
 
-// FilePath 日志路径
-func FilePath(s string) Option {
+// WithFilePathOption 日志路径
+func WithFilePathOption(s string) Option {
 	return func(config *ConfigFile) {
 		// 如果设置了路径就默认开启文件输出
 		config.IsFileOut = true
@@ -70,8 +70,8 @@ func FilePath(s string) Option {
 	}
 }
 
-// FileName 日志名字
-func FileName(s string) Option {
+// WithFileNameOption 日志名字
+func WithFileNameOption(s string) Option {
 	return func(config *ConfigFile) {
 		// 	如果设置了日志名字，就默认开启文件输出
 		// 	如果没有给日志路径，默认输出到当前路径
@@ -83,29 +83,29 @@ func FileName(s string) Option {
 	}
 }
 
-// MaxSize 每个日志文件保存的最大尺寸 单位：MB
-func MaxSize(i int) Option {
+// WithMaxSizeOption 每个日志文件保存的最大尺寸 单位：MB
+func WithMaxSizeOption(i int) Option {
 	return func(config *ConfigFile) {
 		config.MaxSize = i
 	}
 }
 
-// MaxBackups 日志文件最多保存多少个备份
-func MaxBackups(i int) Option {
+// WithMaxBackupsOption 日志文件最多保存多少个备份
+func WithMaxBackupsOption(i int) Option {
 	return func(config *ConfigFile) {
 		config.MaxBackups = i
 	}
 }
 
-// MaxAge 文件最多保存多少天
-func MaxAge(i int) Option {
+// WithMaxAgeOption 文件最多保存多少天
+func WithMaxAgeOption(i int) Option {
 	return func(config *ConfigFile) {
 		config.MaxAge = i
 	}
 }
 
-// Compress 是否压缩日志
-func Compress(b bool) Option {
+// WithCompressOption 是否压缩日志
+func WithCompressOption(b bool) Option {
 	return func(config *ConfigFile) {
 		config.Compress = b
 	}
