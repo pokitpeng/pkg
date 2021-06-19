@@ -8,13 +8,13 @@
 **/*.log
 
 # VSCode settings
-**/.vscode/
+**/*.vscode/
 
 # IDEA files
-**/.idea/
+**/*.idea/
 
 # OSX dir files
-**/.DS_Store
+**/*.DS_Store
 
 # Sublime Text settings
 **/*.sublime-workspace
