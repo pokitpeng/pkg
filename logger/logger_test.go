@@ -1,62 +1,101 @@
-package logger
+package log
 
 import (
+	"context"
+	"os"
 	"testing"
+
+	"github.com/go-kratos/kratos/v2/log"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-// go test -v -count=1 -run ^TestNewLogger$ .
-func TestNewLogger(t *testing.T) {
-	log := NewLogger(Config{
+func TestZapLogger1(t *testing.T) {
+	encoder := zapcore.EncoderConfig{
+		TimeKey:        "t",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		MessageKey:     "msg",
+		StacktraceKey:  "stack",
+		EncodeTime:     zapcore.RFC3339TimeEncoder,
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeDuration: zapcore.SecondsDurationEncoder,
+		EncodeCaller:   zapcore.FullCallerEncoder,
+	}
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(encoder),
+		zapcore.NewMultiWriteSyncer(
+			zapcore.AddSync(os.Stdout),
+		),
+		zap.NewAtomicLevelAt(zapcore.DebugLevel),
+	)
+	opts := []zap.Option{
+		zap.AddStacktrace(
+			zap.NewAtomicLevelAt(zapcore.ErrorLevel)),
+		zap.AddCaller(),
+		zap.AddCallerSkip(2),
+		zap.Development(),
+	}
+	logger := zap.New(core, opts...)
+	// zlog := log.NewHelper(logger)
+	logger.Sugar().Infow("name", "kratos", "from")
+	logger.Sugar().Infow("name", "kratos", "demo")
+}
+
+func TestZapLogger2(t *testing.T) {
+	logger := NewDevLog()
+	zlog := log.NewHelper(logger)
+	zlog.Infow("name", "kratos", "from", "opensource")
+	zlog.Infow("name", "kratos", "demo")
+}
+
+func TestZapLogger3(t *testing.T) {
+	logger := NewZapLogger(Config{
 		IsStdOut: true,
 		Encoder:  EncoderJson,
 		LEncoder: LEncoderLowercase,
 		Level:    LevelDebug,
 	},
-		WithServiceNameOption("test"),
+		WithServiceNameOption("tests"),
 	)
-
-	log.Print("debug message")
-	log.Printf("debug %s", "message")
-	log.Printw("debug message", "model", "user")
-
-	log.Debug("debug message")
-	log.Debugf("debug %s", "message")
-	log.Debugw("debug message", "model", "dao")
-
-	log.Info("info message")
-	log.Infof("info %s", "message")
-	log.Infow("info message", "model", "data")
-
-	log.Warn("warn message")
-	log.Warnf("warn %s", "message")
-	log.Warnw("warn message", "model", "middleware")
-
-	log.Error("warn message")
-	log.Errorf("warn %s", "message")
-	log.Errorw("warn message", "model", "core")
+	logger = log.With(logger, "k", "v")
+	zlog := log.NewHelper(logger)
+	zlog.Infow("name", "kratos", "from", "opensource")
+	zlog.Infow("name", "kratos")
+	zlog.Infow("name", "kratos", "form")
+	zlog.Info("hello log")
 }
 
-// go test -v -count=1 -run ^TestNewLogger .
-func TestNewDevLog(t *testing.T) {
-	log := NewDevLog()
+func TestZapLogger4(t *testing.T) {
+	logger := NewZapLogger(Config{
+		IsStdOut: true,
+		Encoder:  EncoderJson,
+		LEncoder: LEncoderLowercase,
+		Level:    LevelDebug,
+	},
+		WithServiceNameOption("tests"),
+	)
+	ctx := context.WithValue(context.Background(), "trace_id", "2233")
+	logger = log.With(logger, "k", "v")
+	logger = log.WithContext(ctx, logger)
+	zlog := log.NewHelper(logger)
+	zlog.Infow("name", "kratos", "from", "opensource")
+	zlog.Infow("name", "kratos")
+	zlog.Infow("name", "kratos", "form")
+	zlog.Info("hello log")
+}
 
-	log.Print("debug message")
-	log.Printf("debug %s", "message")
-	log.Printw("debug message", "model", "user")
+func BenchmarkZapLogger(b *testing.B) {
+	devLog := NewDevLog()
+	helper := log.NewHelper(devLog)
+	for i := 0; i < b.N; i++ {
+		helper.Debug("hello zap log")
+		helper.Info("hello zap log")
+		helper.Warn("hello zap log")
+		helper.Error("hello zap log")
+	}
 
-	log.Debug("debug message")
-	log.Debugf("debug %s", "message")
-	log.Debugw("debug message", "model", "dao")
-
-	log.Info("info message")
-	log.Infof("info %s", "message")
-	log.Infow("info message", "model", "data")
-
-	log.Warn("warn message")
-	log.Warnf("warn %s", "message")
-	log.Warnw("warn message", "model", "middleware")
-
-	log.Error("warn message")
-	log.Errorf("warn %s", "message")
-	log.Errorw("warn message", "model", "core")
+	// 26300 ns/op
 }
