@@ -1,17 +1,28 @@
-package logger
+package log
 
 import (
+	"bytes"
+	"context"
+	"fmt"
 	"os"
 	"path"
 	"strings"
+	"sync"
 
+	"github.com/go-kratos/kratos/v2/log"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-type Log struct {
-	logger *zap.Logger
+var _ log.Logger = (*ZapLogger)(nil)
+
+// ZapLogger is a logger impl.
+type ZapLogger struct {
+	log  *zap.Logger
+	ctx  context.Context
+	pool *sync.Pool
 }
 
 const (
@@ -43,14 +54,14 @@ type Config struct {
 
 // ConfigOption 选填参数，文件输出配置和appName
 type ConfigOption struct {
-	AppName    string
-	IsFileOut  bool   // 是否输出到文件
-	FilePath   string // 日志路径
-	FileName   string // 日志名字
-	MaxSize    int    // 每个日志文件保存的最大尺寸 单位：MB
-	MaxBackups int    // 日志文件最多保存多少个备份
-	MaxAge     int    // 文件最多保存多少天
-	Compress   bool   // 是否压缩
+	ServiceName string
+	IsFileOut   bool   // 是否输出到文件
+	FilePath    string // 日志路径
+	FileName    string // 日志名字
+	MaxSize     int    // 每个日志文件保存的最大尺寸 单位：MB
+	MaxBackups  int    // 日志文件最多保存多少个备份
+	MaxAge      int    // 文件最多保存多少天
+	Compress    bool   // 是否压缩
 }
 
 type Option func(config *ConfigOption)
@@ -58,7 +69,7 @@ type Option func(config *ConfigOption)
 // WithServiceNameOption app名字设置
 func WithServiceNameOption(s string) Option {
 	return func(config *ConfigOption) {
-		config.AppName = s
+		config.ServiceName = s
 	}
 }
 
@@ -119,7 +130,8 @@ func WithCompressOption(b bool) Option {
 	}
 }
 
-func NewLogger(config Config, options ...Option) *Log {
+// NewZapLogger return a zap logger.
+func NewZapLogger(config Config, options ...Option) log.Logger {
 	var configOption ConfigOption
 
 	// 应用option
@@ -142,11 +154,11 @@ func NewLogger(config Config, options ...Option) *Log {
 	}
 
 	encoderConfig := zapcore.EncoderConfig{
-		TimeKey:        "time",
-		LevelKey:       "level",
-		NameKey:        "logger",
-		CallerKey:      "caller",
-		MessageKey:     "msg",
+		TimeKey:   "time",
+		LevelKey:  "level",
+		NameKey:   "logger",
+		CallerKey: "caller",
+		// MessageKey:     "msg",
 		StacktraceKey:  "stacktrace",
 		LineEnding:     zapcore.DefaultLineEnding,
 		EncodeLevel:    lenc,                           // 大小写
@@ -215,107 +227,67 @@ func NewLogger(config Config, options ...Option) *Log {
 		zap.AddCaller(),
 		zap.Development(), // 开启开发模式，堆栈跟踪
 		zap.AddStacktrace(zapcore.FatalLevel),
-		zap.AddCallerSkip(1),
+		zap.AddCallerSkip(3),
 	}
-	if configOption.AppName != "" {
-		opts = append(opts, zap.Fields(zap.String("serviceName", configOption.AppName)))
+	if configOption.ServiceName != "" {
+		opts = append(opts, zap.Fields(zap.String("serviceName", configOption.ServiceName)))
 	}
 
-	return &Log{logger: zap.New(core, opts...)}
+	return &ZapLogger{
+		log: zap.New(core, opts...),
+		pool: &sync.Pool{
+			New: func() interface{} {
+				return new(bytes.Buffer)
+			},
+		}}
 }
-
-func (log *Log) Debug(args ...interface{}) {
-	log.logger.Sugar().Debug(args...)
-}
-
-func (log *Log) Debugf(template string, args ...interface{}) {
-	log.logger.Sugar().Debugf(template, args...)
-}
-
-func (log *Log) Debugw(msg string, keysAndValues ...interface{}) {
-	log.logger.Sugar().Debugw(msg, keysAndValues...)
-}
-
-func (log *Log) Print(args ...interface{}) {
-	log.logger.Sugar().Debug(args...)
-}
-
-func (log *Log) Printf(template string, args ...interface{}) {
-	log.logger.Sugar().Debugf(template, args...)
-}
-
-func (log *Log) Printw(msg string, keysAndValues ...interface{}) {
-	log.logger.Sugar().Debugw(msg, keysAndValues...)
-}
-
-func (log *Log) Info(args ...interface{}) {
-	log.logger.Sugar().Info(args...)
-}
-
-func (log *Log) Infof(template string, args ...interface{}) {
-	log.logger.Sugar().Infof(template, args...)
-}
-
-func (log *Log) Infow(msg string, keysAndValues ...interface{}) {
-	log.logger.Sugar().Infow(msg, keysAndValues...)
-}
-
-func (log *Log) Warn(args ...interface{}) {
-	log.logger.Sugar().Warn(args...)
-}
-
-func (log *Log) Warnf(template string, args ...interface{}) {
-	log.logger.Sugar().Warnf(template, args...)
-}
-
-func (log *Log) Warnw(msg string, keysAndValues ...interface{}) {
-	log.logger.Sugar().Warnw(msg, keysAndValues...)
-}
-
-func (log *Log) Error(args ...interface{}) {
-	log.logger.Sugar().Error(args...)
-}
-
-func (log *Log) Errorf(template string, args ...interface{}) {
-	log.logger.Sugar().Errorf(template, args...)
-}
-
-func (log *Log) Errorw(msg string, keysAndValues ...interface{}) {
-	log.logger.Sugar().Errorw(msg, keysAndValues...)
-}
-
-func (log *Log) Fatal(args ...interface{}) {
-	log.logger.Sugar().Fatal(args...)
-}
-
-func (log *Log) Fatalf(template string, args ...interface{}) {
-	log.logger.Sugar().Fatalf(template, args...)
-}
-
-func (log *Log) Fatalw(msg string, keysAndValues ...interface{}) {
-	log.logger.Sugar().Fatalw(msg, keysAndValues...)
-}
-
-func (log *Log) Panic(args ...interface{}) {
-	log.logger.Sugar().Panic(args...)
-}
-
-func (log *Log) Panicf(template string, args ...interface{}) {
-	log.logger.Sugar().Panicf(template, args...)
-}
-
-func (log *Log) Panicw(msg string, keysAndValues ...interface{}) {
-	log.logger.Sugar().Panicw(msg, keysAndValues...)
-}
-
-// ======================================
 
 // NewDevLog 用于测试环境的log
-func NewDevLog() *Log {
-	return NewLogger(Config{
+func NewDevLog() log.Logger {
+	return NewZapLogger(Config{
 		IsStdOut: true,
 		Encoder:  EncoderConsole,
 		LEncoder: LEncoderLowercaseColor,
 		Level:    LevelDebug,
 	})
+}
+
+// Log Implementation of logger interface.
+func (l *ZapLogger) Log(level log.Level, keyvals ...interface{}) error {
+	if len(keyvals) == 0 {
+		return nil
+	}
+	if len(keyvals)%2 != 0 {
+		keyvals = append(keyvals, "")
+	}
+	buf := l.pool.Get().(*bytes.Buffer)
+	var fields []zap.Field
+	if traceId := getTraceId(l.ctx); traceId != "" {
+		fields = append(fields, zap.String("trace_id", traceId))
+	}
+	for i := 0; i < len(keyvals); i += 2 {
+		fields = append(fields, zap.Any(fmt.Sprint(keyvals[i]), fmt.Sprint(keyvals[i+1])))
+	}
+	switch level {
+	case log.LevelDebug:
+		l.log.Debug(buf.String(), fields...)
+	case log.LevelInfo:
+		l.log.Info(buf.String(), fields...)
+	case log.LevelWarn:
+		l.log.Warn(buf.String(), fields...)
+	case log.LevelError:
+		l.log.Error(buf.String(), fields...)
+	}
+	buf.Reset()
+	l.pool.Put(buf)
+	return nil
+}
+
+// get trace id
+func getTraceId(ctx context.Context) string {
+	var traceID string
+	if tid := trace.SpanContextFromContext(ctx).TraceID(); tid.IsValid() {
+		traceID = tid.String()
+	}
+	return traceID
 }
