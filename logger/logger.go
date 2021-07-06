@@ -4,37 +4,40 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-kratos/kratos/v2/log"
+	"github.com/lestrrat-go/file-rotatelogs"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-var _ log.Logger = (*ZapLogger)(nil)
+var _ log.Logger = (*ZapLog)(nil)
 
-// ZapLogger is a logger impl.
-type ZapLogger struct {
+// ZapLog is a logger impl.
+type ZapLog struct {
 	log  *zap.Logger
 	ctx  context.Context
 	pool *sync.Pool
 }
 
-const (
-	EncoderJson = iota
-	EncoderConsole
-	LEncoderCapitalColor
-	LEncoderCapital
-	LEncoderLowercaseColor
-	LEncoderLowercase
-)
+const ()
 
 const (
+	FormatJson            = "json"
+	FormatConsole         = "console"
+	EncoderCapitalColor   = "cc"
+	EncoderCapital        = "c"
+	EncoderLowercaseColor = "lc"
+	EncoderLowercase      = "l"
+
 	LevelDebug  = "debug"
 	LevelInfo   = "info"
 	LevelWarn   = "warn"
@@ -47,44 +50,49 @@ const (
 // Config 必填参数，终端输出基本配置
 type Config struct {
 	IsStdOut bool   // 是否输出到控制台
-	Encoder  int    // json输出还是普通输出
-	LEncoder int    // 输出大小写和颜色
+	Format   string // json输出还是普通输出
+	Encoder  string // 输出大小写和颜色
 	Level    string // 输出日志级别
 }
 
 // ConfigOption 选填参数，文件输出配置和appName
 type ConfigOption struct {
-	ServiceName string
-	IsFileOut   bool   // 是否输出到文件
-	FilePath    string // 日志路径
-	FileName    string // 日志名字
-	MaxSize     int    // 每个日志文件保存的最大尺寸 单位：MB
-	MaxBackups  int    // 日志文件最多保存多少个备份
-	MaxAge      int    // 文件最多保存多少天
-	Compress    bool   // 是否压缩
+	// CalllerSkip  int
+	IsFileOut    bool   // 是否输出到文件
+	FilePath     string // 日志路径
+	FileName     string // 日志名字
+	MaxAge       string // 文件最多保存时间
+	LogSizeSplit *LogSizeSplitConfig
+	LogAgeSplit  *LogAgeSplitConfig
+}
+
+type LogSizeSplitConfig struct {
+	MaxSize    int  // 每个日志文件保存的最大尺寸 单位：MB
+	MaxBackups int  // 日志文件最多保存多少个备份
+	Compress   bool // 是否压缩
+}
+
+type LogAgeSplitConfig struct {
+	Suffix       string // 分割后的文件后缀
+	RotationTime string // 每多久分割一次
 }
 
 type Option func(config *ConfigOption)
 
-// WithServiceNameOption app名字设置
-func WithServiceNameOption(s string) Option {
-	return func(config *ConfigOption) {
-		config.ServiceName = s
-	}
-}
-
-// WithFileOutOption 是否输出到文件
-func WithFileOutOption(b bool) Option {
-	return func(config *ConfigOption) {
-		config.IsFileOut = b
-	}
-}
+// WithCallerSkipOption 控制当前调用栈第几层的栈帧信息
+// func WithCallerSkipOption(c int) Option {
+// 	return func(config *ConfigOption) {
+// 		config.CalllerSkip = c
+// 	}
+// }
 
 // WithFilePathOption 日志路径
 func WithFilePathOption(s string) Option {
 	return func(config *ConfigOption) {
-		// 如果设置了路径就默认开启文件输出
-		config.IsFileOut = true
+		// 	如果没有给日志路径为空，默认输出到当前路径
+		if strings.TrimSpace(config.FilePath) == "" {
+			config.FilePath = "./"
+		}
 		config.FilePath = s
 	}
 }
@@ -92,62 +100,45 @@ func WithFilePathOption(s string) Option {
 // WithFileNameOption 日志名字
 func WithFileNameOption(s string) Option {
 	return func(config *ConfigOption) {
-		// 	如果设置了日志名字，就默认开启文件输出
-		// 	如果没有给日志路径，默认输出到当前路径
-		config.IsFileOut = true
-		if strings.TrimSpace(config.FilePath) == "" {
-			config.FilePath = "./"
+		// 	如果没有给日志名字为空，报错
+		if strings.TrimSpace(s) == "" {
+			panic("log file name is nil.")
 		}
 		config.FileName = s
 	}
 }
 
-// WithMaxSizeOption 每个日志文件保存的最大尺寸 单位：MB
-func WithMaxSizeOption(i int) Option {
-	return func(config *ConfigOption) {
-		config.MaxSize = i
-	}
-}
-
-// WithMaxBackupsOption 日志文件最多保存多少个备份
-func WithMaxBackupsOption(i int) Option {
-	return func(config *ConfigOption) {
-		config.MaxBackups = i
-	}
-}
-
 // WithMaxAgeOption 文件最多保存多少天
-func WithMaxAgeOption(i int) Option {
+func WithMaxAgeOption(s string) Option {
 	return func(config *ConfigOption) {
-		config.MaxAge = i
+		config.MaxAge = s
 	}
 }
 
-// WithCompressOption 是否压缩日志
-func WithCompressOption(b bool) Option {
+// WithLogSizeOption 文件按照大小分割配置
+func WithLogSizeOption(logSizeSplitConfig *LogSizeSplitConfig) Option {
 	return func(config *ConfigOption) {
-		config.Compress = b
+		config.LogSizeSplit = logSizeSplitConfig
 	}
 }
 
-// NewZapLogger return a zap logger.
-func NewZapLogger(config Config, options ...Option) log.Logger {
-	var configOption ConfigOption
-
-	// 应用option
-	for _, option := range options {
-		option(&configOption)
+// WithLogAgeOption 文件按照时间分割配置
+func WithLogAgeOption(logAgeSplitConfig *LogAgeSplitConfig) Option {
+	return func(config *ConfigOption) {
+		config.LogAgeSplit = logAgeSplitConfig
 	}
+}
 
+func NewCoreOpts(config Config) (zapcore.EncoderConfig, zap.AtomicLevel) {
 	var lenc func(l zapcore.Level, enc zapcore.PrimitiveArrayEncoder)
-	switch config.LEncoder {
-	case LEncoderCapitalColor:
+	switch strings.ToLower(config.Encoder) {
+	case EncoderCapitalColor:
 		lenc = zapcore.CapitalColorLevelEncoder
-	case LEncoderCapital:
+	case EncoderCapital:
 		lenc = zapcore.CapitalLevelEncoder
-	case LEncoderLowercaseColor:
+	case EncoderLowercaseColor:
 		lenc = zapcore.LowercaseColorLevelEncoder
-	case LEncoderLowercase:
+	case EncoderLowercase:
 		lenc = zapcore.LowercaseLevelEncoder
 	default:
 		lenc = zapcore.CapitalLevelEncoder
@@ -159,62 +150,121 @@ func NewZapLogger(config Config, options ...Option) log.Logger {
 		NameKey:   "logger",
 		CallerKey: "caller",
 		// MessageKey:     "msg",
-		StacktraceKey:  "stacktrace",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    lenc,                           // 大小写
-		EncodeTime:     zapcore.RFC3339TimeEncoder,     // 时间格式
-		EncodeDuration: zapcore.SecondsDurationEncoder, //
-		EncodeCaller:   zapcore.ShortCallerEncoder,     // 追踪路径
-		EncodeName:     zapcore.FullNameEncoder,
+		StacktraceKey:    "stacktrace",
+		LineEnding:       zapcore.DefaultLineEnding,
+		EncodeLevel:      lenc,                       // 大小写
+		EncodeTime:       zapcore.RFC3339TimeEncoder, // 时间格式
+		EncodeDuration:   zapcore.SecondsDurationEncoder,
+		EncodeCaller:     zapcore.ShortCallerEncoder, // 追踪路径
+		EncodeName:       zapcore.FullNameEncoder,
+		ConsoleSeparator: "  ", // console格式，字段间隔符
 	}
 
 	var level zapcore.Level
-	switch strings.ToUpper(config.Level) {
+	switch strings.ToLower(config.Level) {
+	case "debug":
+		level = zapcore.DebugLevel
+	case "info":
+		level = zapcore.InfoLevel
+	case "warn":
+		level = zapcore.WarnLevel
+	case "error":
+		level = zapcore.ErrorLevel
+	case "fatal":
+		level = zapcore.FatalLevel
+	case "panic":
+		level = zapcore.PanicLevel
 	default:
 		level = zapcore.InfoLevel
-	case "DEBUG":
-		level = zapcore.DebugLevel
-	case "INFO":
-		level = zapcore.InfoLevel
-	case "WARN":
-		level = zapcore.WarnLevel
-	case "ERROR":
-		level = zapcore.ErrorLevel
-	case "FATAL":
-		level = zapcore.FatalLevel
-	case "PANIC":
-		level = zapcore.PanicLevel
 	}
-
-	hook := lumberjack.Logger{
-		Filename:   path.Join(configOption.FilePath, configOption.FileName), // log path
-		MaxSize:    configOption.MaxSize,                                    // 每个日志文件保存的最大尺寸 单位：M
-		MaxBackups: configOption.MaxBackups,                                 // 日志文件最多保存多少个备份
-		MaxAge:     configOption.MaxAge,                                     // 文件最多保存多少天
-		Compress:   configOption.Compress,                                   // 是否压缩
-	}
-
-	// 设置日志级别
 	atomicLevel := zap.NewAtomicLevel()
 	atomicLevel.SetLevel(level)
 
-	var ws []zapcore.WriteSyncer
-	if config.IsStdOut {
-		ws = append(ws, zapcore.AddSync(os.Stdout))
+	return encoderConfig, atomicLevel
+}
+
+// LogSize 按照文件时间切割日志
+func withLogAge(option *ConfigOption) io.Writer {
+	// 应用option
+	logname := path.Join(option.FilePath, option.FileName)
+	maxAge, err := time.ParseDuration(option.MaxAge)
+	if err != nil {
+		panic("parse log maxAge err: " + err.Error())
 	}
-	if configOption.IsFileOut {
-		ws = append(ws, zapcore.AddSync(&hook))
+	rotationTime, err := time.ParseDuration(option.LogAgeSplit.RotationTime)
+	if err != nil {
+		panic("parse log rotationTime err: " + err.Error())
+	}
+	hook, err := rotatelogs.New(
+		logname+option.LogAgeSplit.Suffix,
+		rotatelogs.WithLinkName(logname),
+		rotatelogs.WithMaxAge(maxAge),             // 保留多久的日志
+		rotatelogs.WithRotationTime(rotationTime), // 每隔多久分割
+	)
+	if err != nil {
+		panic("new rotatelogs writer err: " + err.Error())
+	}
+	return hook
+}
+
+// LogSize 按照文件时间切割日志
+func withLogSize(option *ConfigOption) io.Writer {
+	logname := path.Join(option.FilePath, option.FileName)
+	maxAge, err := time.ParseDuration(option.MaxAge)
+	if err != nil {
+		panic("parse log maxAge err: " + err.Error())
+	}
+	// 由于两个库输入类型并不相同，使用统一风格转化，可能会有一定精度损失的代价
+	maxAgeDay := int(maxAge.Hours() / 24)
+	hook := lumberjack.Logger{
+		Filename:   logname,
+		MaxSize:    option.LogSizeSplit.MaxSize,
+		MaxBackups: option.LogSizeSplit.MaxBackups,
+		MaxAge:     maxAgeDay,
+		Compress:   option.LogSizeSplit.Compress,
+	}
+	return &hook
+}
+
+// NewZapLogger return a zap logger.
+func NewZapLogger(config Config, settings ...Option) log.Logger {
+	var configOption ConfigOption
+
+	// 应用option
+	for _, setting := range settings {
+		setting(&configOption)
 	}
 
+	if configOption.LogAgeSplit != nil && configOption.LogSizeSplit != nil {
+		panic("LogAgeSplit and LogSizeSplit can't both set.")
+	}
+
+	var ws []zapcore.WriteSyncer
 	var enc zapcore.Encoder
 
-	switch config.Encoder {
-	case EncoderJson:
-		enc = zapcore.NewJSONEncoder(encoderConfig)
-	case EncoderConsole:
-		enc = zapcore.NewConsoleEncoder(encoderConfig)
+	coreOpts, atomicLevel := NewCoreOpts(config)
+
+	switch strings.ToLower(config.Format) {
+	case FormatJson:
+		enc = zapcore.NewJSONEncoder(coreOpts)
+	case FormatConsole:
+		enc = zapcore.NewConsoleEncoder(coreOpts)
 	default:
-		enc = zapcore.NewJSONEncoder(encoderConfig)
+		enc = zapcore.NewJSONEncoder(coreOpts)
+	}
+
+	if config.IsStdOut {
+		ws = append(ws, os.Stdout)
+	}
+
+	if configOption.LogAgeSplit != nil {
+		fmt.Println(configOption)
+		logAgeSplit := withLogAge(&configOption)
+		ws = append(ws, zapcore.AddSync(logAgeSplit))
+	}
+	if configOption.LogSizeSplit != nil {
+		logSizeSplit := withLogSize(&configOption)
+		ws = append(ws, zapcore.AddSync(logSizeSplit))
 	}
 
 	core := zapcore.NewCore(
@@ -223,17 +273,19 @@ func NewZapLogger(config Config, options ...Option) log.Logger {
 		atomicLevel,                        // 日志级别
 	)
 
+	// var cs int
+	// if configOption.CalllerSkip == 0 {
+	// 	cs = 3
+	// }
+
 	opts := []zap.Option{
 		zap.AddCaller(),
 		zap.Development(), // 开启开发模式，堆栈跟踪
 		zap.AddStacktrace(zapcore.FatalLevel),
-		zap.AddCallerSkip(3),
-	}
-	if configOption.ServiceName != "" {
-		opts = append(opts, zap.Fields(zap.String("serviceName", configOption.ServiceName)))
+		zap.AddCallerSkip(2),
 	}
 
-	return &ZapLogger{
+	return &ZapLog{
 		log: zap.New(core, opts...),
 		pool: &sync.Pool{
 			New: func() interface{} {
@@ -242,18 +294,24 @@ func NewZapLogger(config Config, options ...Option) log.Logger {
 		}}
 }
 
-// NewDevLog 用于测试环境的log
-func NewDevLog() log.Logger {
-	return NewZapLogger(Config{
+func NewLog(config Config, settings ...Option) *log.Helper {
+	logger := NewZapLogger(config, settings...)
+	return log.NewHelper(logger)
+}
+
+// NewDevLog 用于开发环境的log
+func NewDevelopLog() *log.Helper {
+	logger := NewLog(Config{
 		IsStdOut: true,
-		Encoder:  EncoderConsole,
-		LEncoder: LEncoderLowercaseColor,
+		Format:   FormatConsole,
+		Encoder:  EncoderCapitalColor,
 		Level:    LevelDebug,
 	})
+	return logger
 }
 
 // Log Implementation of logger interface.
-func (l *ZapLogger) Log(level log.Level, keyvals ...interface{}) error {
+func (l *ZapLog) Log(level log.Level, keyvals ...interface{}) error {
 	if len(keyvals) == 0 {
 		return nil
 	}
