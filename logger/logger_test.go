@@ -2,55 +2,11 @@ package log
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/go-kratos/kratos/v2/log"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
-
-func TestZapLogger1(t *testing.T) {
-	encoder := zapcore.EncoderConfig{
-		TimeKey:        "t",
-		LevelKey:       "level",
-		NameKey:        "logger",
-		CallerKey:      "caller",
-		MessageKey:     "msg",
-		StacktraceKey:  "stack",
-		EncodeTime:     zapcore.RFC3339TimeEncoder,
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeDuration: zapcore.SecondsDurationEncoder,
-		EncodeCaller:   zapcore.FullCallerEncoder,
-	}
-	core := zapcore.NewCore(
-		zapcore.NewJSONEncoder(encoder),
-		zapcore.NewMultiWriteSyncer(
-			zapcore.AddSync(os.Stdout),
-		),
-		zap.NewAtomicLevelAt(zapcore.DebugLevel),
-	)
-	opts := []zap.Option{
-		zap.AddStacktrace(
-			zap.NewAtomicLevelAt(zapcore.ErrorLevel)),
-		zap.AddCaller(),
-		zap.AddCallerSkip(2),
-		zap.Development(),
-	}
-	logger := zap.New(core, opts...)
-	// zlog := log.NewHelper(logger)
-	logger.Sugar().Infow("name", "kratos", "from")
-	logger.Sugar().Infow("name", "kratos", "demo")
-}
-
-func TestZapLogger2(t *testing.T) {
-	log := NewDevelopLog()
-	log.Infow("name", "kratos", "from", "opensource")
-	log.Infow("name", "kratos", "demo")
-	log.Error("err msg")
-}
 
 func TestZapLogger3(t *testing.T) {
 	log := NewLog(Config{
@@ -62,7 +18,7 @@ func TestZapLogger3(t *testing.T) {
 		// WithCallerSkipOption(4),
 		WithFilePathOption("./"),
 		WithFileNameOption("aaa"),
-		WithMaxAgeOption("3s"), // 保留3s内日志
+		WithMaxAgeOption(1), // 保留1天内日志
 		WithLogAgeOption(&LogAgeSplitConfig{
 			Suffix:       ".%Y-%m-%d-%H:%M:%S",
 			RotationTime: "1s", // 每秒切割日志
