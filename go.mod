@@ -12,5 +12,6 @@ require (
 	github.com/streadway/amqp v1.0.0
 	go.opentelemetry.io/otel/trace v0.20.0
 	go.uber.org/zap v1.16.0
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
