@@ -1,4 +1,4 @@
-package log
+package logger
 
 /*
 log模块创建的目的是封装zaplog，这里拆分出zapcore，可以更好得适应不同项目的需求。

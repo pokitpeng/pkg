@@ -2,7 +2,6 @@ package rabbitmq
 
 import (
 	"fmt"
-	"log"
 	"testing"
 	"time"
 
@@ -65,16 +64,16 @@ func TestPool(t *testing.T) {
 	for i := 0; i < num; i++ {
 		v, err := p.Get()
 		if err != nil {
-			log.Printf("get connect err:%s", err.Error())
+			log.Infof("get connect err:%s", err.Error())
 		}
 		cc = append(cc, v)
 	}
 	time.Sleep(time.Millisecond * 100)
-	log.Printf("after get, connect num:%d", p.Len())
+	log.Infof("after get, connect num:%d", p.Len())
 	// 将连接放回连接池中
 	for _, v := range cc {
 		p.Put(v)
 	}
-	log.Printf("after put, connect num:%d", p.Len())
+	log.Infof("after put, connect num:%d", p.Len())
 	time.Sleep(2 * time.Second)
 }

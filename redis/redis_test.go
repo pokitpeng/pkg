@@ -21,8 +21,9 @@ const (
 
 // Client redis 连接池
 var (
-	Client *redis.Client
+	log    = logger.NewDevelopLog()
 	ctx    = context.Background()
+	Client *redis.Client
 )
 
 // 初始化redis链接池
@@ -38,11 +39,11 @@ func init() {
 	})
 	pong, err := Client.Ping(ctx).Result()
 	if err == redis.Nil {
-		logger.Panic("Redis异常")
+		log.Fatalf("Redis异常")
 	} else if err != nil {
-		logger.Panicf("失败:%s", err.Error())
+		log.Fatalf("失败:%s", err.Error())
 	} else {
-		logger.Info(pong)
+		log.Info(pong)
 	}
 
 }
@@ -51,25 +52,25 @@ func init() {
 func TestString(t *testing.T) { // 设置k,v
 	err := Client.Set(ctx, "name", "tom", 0).Err()
 	if err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
 
 	val, err := Client.Get(ctx, "name").Result()
 	if err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
-	logger.Info("name=", val)
+	log.Info("name=", val)
 
 	val2, err := Client.Get(ctx, "missing_key").Result()
 	if err == redis.Nil {
-		logger.Warn("missing_key does not exist")
+		log.Warn("missing_key does not exist")
 	} else if err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	} else {
-		logger.Info("missing_key=", val2)
+		log.Info("missing_key=", val2)
 	}
 }
 
@@ -77,117 +78,117 @@ func TestString(t *testing.T) { // 设置k,v
 func TestStringUpdate(t *testing.T) { // 更新k,v
 	err := Client.Set(ctx, "name", "tom", 0).Err()
 	if err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
 
 	val, err := Client.Get(ctx, "name").Result()
 	if err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
-	logger.Info("before update name=", val)
+	log.Info("before update name=", val)
 
 	// update
 	err = Client.Set(ctx, "name", "jerry", 0).Err()
 	if err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
-	logger.Info("updating...")
+	log.Info("updating...")
 
 	val2, err := Client.Get(ctx, "name").Result()
 	if err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
-	logger.Info("after update name=", val2)
+	log.Info("after update name=", val2)
 }
 
 // go test --count=1 -run TestStringExpiration
 func TestStringExpiration(t *testing.T) { // k,v过期时间
 	err := Client.Set(ctx, "name", "tom", 2*time.Second).Err()
 	if err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
 
 	val, err := Client.Get(ctx, "name").Result()
 	if err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
-	logger.Info("before expiration name=", val)
+	log.Info("before expiration name=", val)
 
 	// sleep
-	logger.Info("sleep 3s ...")
+	log.Info("sleep 3s ...")
 	time.Sleep(3 * time.Second)
 
 	val2, err := Client.Get(ctx, "name").Result()
 	if err == redis.Nil {
-		logger.Warn("after expiration name does not exist")
+		log.Warn("after expiration name does not exist")
 	} else if err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	} else {
-		logger.Info("after expiration name=", val2)
+		log.Info("after expiration name=", val2)
 	}
 }
 
 // go test --count=1 -run TestHash
 func TestHash(t *testing.T) { // 设置hash
 	if err := Client.HSet(ctx, "myhash1", "key1", "value1", "key2", "value2").Err(); err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
 	if err := Client.HSet(ctx, "myhash2", []string{"key1", "value1", "key2", "value2"}).Err(); err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
 	if err := Client.HSet(ctx, "myhash3", map[string]interface{}{"key1": "value1", "key2": "value2"}).Err(); err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
 
 	myhash1, err := Client.HGet(ctx, "myhash1", "key1").Result()
 	if err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
-	logger.Infof("get hash myhash1[key1]=%s", myhash1)
+	log.Infof("get hash myhash1[key1]=%s", myhash1)
 
 	myhash1all, err := Client.HGetAll(ctx, "myhash1").Result()
 	if err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
-	logger.Infof("get hash myhash1all=%v", myhash1all)
+	log.Infof("get hash myhash1all=%v", myhash1all)
 
 	myhash2all, err := Client.HGetAll(ctx, "myhash2").Result()
 	if err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
-	logger.Infof("get hash myhash2all=%v", myhash2all)
+	log.Infof("get hash myhash2all=%v", myhash2all)
 
 	myhash3all, err := Client.HGetAll(ctx, "myhash3").Result()
 	if err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
-	logger.Infof("get hash myhash3all=%v", myhash3all)
+	log.Infof("get hash myhash3all=%v", myhash3all)
 }
 
 // go test --count=1 -run TestList
 func TestList(t *testing.T) { // 设置list
 	if err := Client.LPush(ctx, "mylist", []string{"hello1", "hello2", "hello3"}).Err(); err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
 	result, err := Client.LRange(ctx, "mylist", -1, -1).Result()
 	if err != nil {
-		logger.Error(err)
+		log.Error(err)
 		return
 	}
-	logger.Infof("get list mylist=%v", result)
+	log.Infof("get list mylist=%v", result)
 }

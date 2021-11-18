@@ -3,12 +3,10 @@ package rabbitmq
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"testing"
 	"time"
 
-	"github.com/pokitpeng/pkg/logger"
 	"github.com/streadway/amqp"
 )
 
@@ -62,7 +60,7 @@ func initMQ() {
 
 	// 创建一个连接池： 初始化5，最大空闲连接是20，最大并发连接30
 	poolConfig := &Config{
-		InitialCap: 10,  // 资源池初始连接数
+		InitialCap: 10, // 资源池初始连接数
 		MaxIdle:    10, // 最大空闲连接数
 		MaxCap:     20, // 最大并发连接数
 		Factory:    factory,
@@ -84,7 +82,7 @@ func initMQ() {
 func send(num int) {
 	rc, err := MQ.Get()
 	if err != nil {
-		logger.Errorf("get rabbitmq connection err:%v", err)
+		log.Errorf("get rabbitmq connection err:%v", err)
 		return
 	}
 	defer MQ.Put(rc)
@@ -104,24 +102,24 @@ func send(num int) {
 		time.Sleep(200 * time.Millisecond)
 		select {
 		case err := <-notifyClose:
-			logger.Panicf("notifyClose, err:%v", err)
+			log.Fatalf("notifyClose, err:%v", err)
 		default:
 			msg := "hello" + strconv.Itoa(i)
 			err = rabbitmq.PublishRouting(rch, msg)
 			if err != nil {
-				logger.Errorf("PublishRouting err:%v", err)
+				log.Errorf("PublishRouting err:%v", err)
 			}
 		}
 	}
 
-	logger.Infof("goroutine finished")
+	log.Infof("goroutine finished")
 	time.Sleep(1 * time.Second)
 }
 
 func receive() {
 	rc, err := MQ.Get()
 	if err != nil {
-		logger.Errorf("get rabbitmq connection err:%v", err)
+		log.Errorf("get rabbitmq connection err:%v", err)
 		return
 	}
 	defer MQ.Put(rc)
@@ -142,12 +140,12 @@ func receive() {
 
 	go func() {
 		for msg := range msgs {
-			log.Printf(" [x] %s", msg.Body)
+			log.Infof(" [x] %s", msg.Body)
 			time.Sleep(200 * time.Millisecond)
 			_ = msg.Ack(false) // 通过ack
 		}
 	}()
 
-	log.Printf(" [*] Waiting for logs. To exit press CTRL+C")
+	log.Infof(" [*] Waiting for logs. To exit press CTRL+C")
 	<-forever
 }

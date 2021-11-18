@@ -1,4 +1,4 @@
-package log
+package logger
 
 /*
 为了继承kratos logger的接口而创建，详细可参考：https://github.com/go-kratos/kratos

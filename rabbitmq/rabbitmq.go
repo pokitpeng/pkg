@@ -5,7 +5,10 @@ import (
 	"github.com/streadway/amqp"
 )
 
-var MQ Pool // mq连接池
+var (
+	MQ  Pool // mq连接池
+	log = logger.NewDevelopLog()
+)
 
 func GetChannel(v interface{}) (*amqp.Channel, error) {
 	return v.(*amqp.Connection).Channel()
@@ -42,10 +45,10 @@ func (r *RabbitMQ) PublishRouting(rch *amqp.Channel, message string) error {
 		r.args,      // arguments
 	)
 	if err != nil {
-		logger.Debugf("PublishRouting err:%s", err.Error())
+		log.Debugf("PublishRouting err:%s", err.Error())
 		return err
 	}
-	// logger.Debugf("QueueDeclare: %v", r.QueueName)
+	// log.Debugf("QueueDeclare: %v", r.QueueName)
 
 	// 1.create exchange
 	err = rch.ExchangeDeclare(
@@ -58,10 +61,10 @@ func (r *RabbitMQ) PublishRouting(rch *amqp.Channel, message string) error {
 		r.args,
 	)
 	if err != nil {
-		logger.Debugf("ExchangeDeclare err: %s", err.Error())
+		log.Debugf("ExchangeDeclare err: %s", err.Error())
 		return err
 	}
-	// logger.Debugf("ExchangeDeclare: %v", r.ExchangeName)
+	// log.Debugf("ExchangeDeclare: %v", r.ExchangeName)
 
 	// 2. bind queue
 	err = rch.QueueBind(
@@ -71,10 +74,10 @@ func (r *RabbitMQ) PublishRouting(rch *amqp.Channel, message string) error {
 		false,
 		r.args)
 	if err != nil {
-		logger.Errorf("QueueBind err:%s", err.Error())
+		log.Errorf("QueueBind err:%s", err.Error())
 		return err
 	}
-	// logger.Debugf("QueueBind queue bind success, exchange:%v,queue:%v", r.ExchangeName, r.QueueName)
+	// log.Debugf("QueueBind queue bind success, exchange:%v,queue:%v", r.ExchangeName, r.QueueName)
 
 	// 3.send
 	err = rch.Publish(
@@ -88,15 +91,15 @@ func (r *RabbitMQ) PublishRouting(rch *amqp.Channel, message string) error {
 			Body:         []byte(message),
 		})
 	if err != nil {
-		logger.Errorf("Publish err:%s", err.Error())
+		log.Errorf("Publish err:%s", err.Error())
 		return err
 	}
 	err = rch.Confirm(false)
 	if err != nil {
-		logger.Errorf("mq confirm msg err:%s", err.Error())
+		log.Errorf("mq confirm msg err:%s", err.Error())
 		return err
 	}
-	logger.Debugf("Publish: %v", message)
+	log.Debugf("Publish: %v", message)
 	return nil
 }
 
@@ -113,10 +116,10 @@ func (r *RabbitMQ) BroadcastRouting(rch *amqp.Channel, message string, queues ..
 		r.args,
 	)
 	if err != nil {
-		logger.Errorf("ExchangeDeclare err:%s", err.Error())
+		log.Errorf("ExchangeDeclare err:%s", err.Error())
 		return err
 	}
-	logger.Debugf("ExchangeDeclare: %v", r.ExchangeName)
+	log.Debugf("ExchangeDeclare: %v", r.ExchangeName)
 
 	for _, queue := range queues {
 		q, err := rch.QueueDeclare(
@@ -128,10 +131,10 @@ func (r *RabbitMQ) BroadcastRouting(rch *amqp.Channel, message string, queues ..
 			r.args, // arguments
 		)
 		if err != nil {
-			logger.Errorf("QueueDeclare err:%s", err.Error())
+			log.Errorf("QueueDeclare err:%s", err.Error())
 			return err
 		}
-		logger.Debugf("QueueDeclare: %v", r.QueueName)
+		log.Debugf("QueueDeclare: %v", r.QueueName)
 
 		// 2. bind queue
 		err = rch.QueueBind(
@@ -141,10 +144,10 @@ func (r *RabbitMQ) BroadcastRouting(rch *amqp.Channel, message string, queues ..
 			false,
 			r.args)
 		if err != nil {
-			logger.Errorf("QueueBind err:%s", err.Error())
+			log.Errorf("QueueBind err:%s", err.Error())
 			return err
 		}
-		logger.Debugf("QueueBind: exchange:%v,queue:%v", r.ExchangeName, r.QueueName)
+		log.Debugf("QueueBind: exchange:%v,queue:%v", r.ExchangeName, r.QueueName)
 	}
 
 	// 3.send
@@ -159,10 +162,10 @@ func (r *RabbitMQ) BroadcastRouting(rch *amqp.Channel, message string, queues ..
 			Body:         []byte(message),
 		})
 	if err != nil {
-		logger.Errorf("Publish err:%s", err.Error())
+		log.Errorf("Publish err:%s", err.Error())
 		return err
 	}
-	logger.Debugf("Publish: %v", message)
+	log.Debugf("Publish: %v", message)
 	return nil
 }
 
@@ -178,7 +181,7 @@ func (r *RabbitMQ) ReceiveRouting(rch *amqp.Channel) (msgs <-chan amqp.Delivery,
 		r.args,         // arguments
 	)
 	if err != nil {
-		logger.Errorf("ExchangeDeclare err:%s", err.Error())
+		log.Errorf("ExchangeDeclare err:%s", err.Error())
 		return
 	}
 
@@ -191,7 +194,7 @@ func (r *RabbitMQ) ReceiveRouting(rch *amqp.Channel) (msgs <-chan amqp.Delivery,
 		r.args,      // arguments
 	)
 	if err != nil {
-		logger.Errorf("QueueDeclare err:%s", err.Error())
+		log.Errorf("QueueDeclare err:%s", err.Error())
 		return
 	}
 
@@ -202,7 +205,7 @@ func (r *RabbitMQ) ReceiveRouting(rch *amqp.Channel) (msgs <-chan amqp.Delivery,
 		false,
 		r.args)
 	if err != nil {
-		logger.Errorf("QueueBind err:%s", err.Error())
+		log.Errorf("QueueBind err:%s", err.Error())
 		return
 	}
 	err = rch.Qos(1, 0, true) // handler msg one by one
@@ -220,7 +223,7 @@ func (r *RabbitMQ) ReceiveRouting(rch *amqp.Channel) (msgs <-chan amqp.Delivery,
 		r.args, // args
 	)
 	if err != nil {
-		logger.Errorf("Consume err:%s", err.Error())
+		log.Errorf("Consume err:%s", err.Error())
 		return
 	}
 
