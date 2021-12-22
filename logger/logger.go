@@ -36,17 +36,6 @@ func NewLogger(settings ...Option) log.Logger {
 		}}
 }
 
-func NewLog(settings ...Option) *log.Helper {
-	logger := NewLogger(settings...)
-	return log.NewHelper(logger)
-}
-
-// NewDevelopLog 用于开发环境的log
-func NewDevelopLog() *log.Helper {
-	logger := NewLog()
-	return logger
-}
-
 // Log Implementation of logger interface.
 func (l *ZapLogger) Log(level log.Level, keyvals ...interface{}) error {
 	if len(keyvals) == 0 {
