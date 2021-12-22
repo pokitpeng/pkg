@@ -32,7 +32,7 @@ func NewZapLogger(config Config, settings ...Option) log.Logger {
 		zap.AddCaller(),
 		zap.Development(), // 开启开发模式，堆栈跟踪
 		zap.AddStacktrace(zapcore.FatalLevel),
-		zap.AddCallerSkip(3),
+		zap.AddCallerSkip(2),
 	}
 	return &ZapLogger{
 		log: zap.New(core, opts...),
