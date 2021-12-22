@@ -9,16 +9,11 @@ import (
 )
 
 func TestZapLogger3(t *testing.T) {
-	log := NewLog(Config{
-		IsStdOut: true,
-		Format:   FormatJson,
-		Encoder:  EncoderLowercase,
-		Level:    LevelDebug,
-	},
+	log := NewLog(
 		// WithCallerSkipOption(4),
 		WithFilePathOption("./"),
 		WithFileNameOption("aaa"),
-		WithMaxAgeOption(1), // 保留1天内日志
+		WithMaxAgeOption("1h"), // 保留1小时内日志
 		WithLogAgeOption(&LogAgeSplitConfig{
 			Suffix:       ".%Y-%m-%d-%H:%M:%S",
 			RotationTime: "1s", // 每秒切割日志
@@ -35,12 +30,7 @@ func TestZapLogger3(t *testing.T) {
 }
 
 func TestZapLogger4(t *testing.T) {
-	logger := NewZapLogger(Config{
-		IsStdOut: true,
-		Format:   FormatJson,
-		Encoder:  EncoderLowercase,
-		Level:    LevelDebug,
-	})
+	logger := NewLogger()
 	ctx := context.WithValue(context.Background(), "trace_id", "2233")
 	logger = log.WithContext(ctx, logger)
 	zlog := log.NewHelper(log.With(logger, "k", "v"))

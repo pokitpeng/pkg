@@ -1,17 +1,14 @@
 package logger
 
-import "github.com/go-kratos/kratos/v2/log"
+// 调用栈深度有问题
+
+/*import "github.com/go-kratos/kratos/v2/log"
 
 var helper = NewDevelopLog()
 
 // NewDevelopLogWithoutColor 没有颜色，兼容特殊终端环境
 func NewDevelopLogWithoutColor() *log.Helper {
-	logger := NewLog(Config{
-		IsStdOut: true,
-		Format:   FormatConsole,
-		Encoder:  EncoderCapital,
-		Level:    LevelDebug,
-	})
+	logger := NewLog()
 	return logger
 }
 
@@ -91,4 +88,4 @@ func Errorw(keyvals ...interface{}) {
 
 func Fatalw(keyvals ...interface{}) {
 	helper.Fatalw(keyvals...)
-}
+}*/

@@ -13,7 +13,6 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 var _ log.Logger = (*ZapLogger)(nil)
@@ -25,17 +24,11 @@ type ZapLogger struct {
 	pool *sync.Pool
 }
 
-// NewZapLogger return a zap logger.
-func NewZapLogger(config Config, settings ...Option) log.Logger {
-	core := NewZapCore(config, settings...)
-	opts := []zap.Option{
-		zap.AddCaller(),
-		zap.Development(), // 开启开发模式，堆栈跟踪
-		zap.AddStacktrace(zapcore.FatalLevel),
-		zap.AddCallerSkip(2),
-	}
+// NewLogger return a kratos logger.
+func NewLogger(settings ...Option) log.Logger {
+	zapLogger := NewZapLogger(settings...)
 	return &ZapLogger{
-		log: zap.New(core, opts...),
+		log: zapLogger,
 		pool: &sync.Pool{
 			New: func() interface{} {
 				return new(bytes.Buffer)
@@ -43,19 +36,14 @@ func NewZapLogger(config Config, settings ...Option) log.Logger {
 		}}
 }
 
-func NewLog(config Config, settings ...Option) *log.Helper {
-	logger := NewZapLogger(config, settings...)
+func NewLog(settings ...Option) *log.Helper {
+	logger := NewLogger(settings...)
 	return log.NewHelper(logger)
 }
 
-// NewDevLog 用于开发环境的log
+// NewDevelopLog 用于开发环境的log
 func NewDevelopLog() *log.Helper {
-	logger := NewLog(Config{
-		IsStdOut: true,
-		Format:   FormatConsole,
-		Encoder:  EncoderCapitalColor,
-		Level:    LevelDebug,
-	})
+	logger := NewLog()
 	return logger
 }
 

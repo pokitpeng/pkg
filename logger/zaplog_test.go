@@ -1,12 +1,11 @@
 package logger
 
 import (
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"os"
 	"testing"
 	"time"
-
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 func TestZapLog1(t *testing.T) {
@@ -37,18 +36,13 @@ func TestZapLog1(t *testing.T) {
 		zap.AddCallerSkip(0),
 		zap.Development(),
 	}
-	logger := zap.New(core, opts...)
-	logger.Sugar().Infow("name", "kratos", "from")
-	logger.Sugar().Infow("name", "kratos", "demo")
+	logger := zap.New(core, opts...).Sugar()
+	logger.Infow("name", "kratos", "from")
+	logger.Infow("name", "kratos", "demo")
 }
 
 func TestZapLog2(t *testing.T) {
-	log := NewZapLog(Config{
-		IsStdOut: true,
-		Format:   "json",
-		Encoder:  "c",
-		Level:    "debug",
-	})
+	log := NewZapLogger().Sugar()
 	log.Infow("infow msg", "kratos", "from")
 	log.Infow("infow msg", "kratos", "demo")
 	log.Error("err msg")
@@ -58,20 +52,15 @@ func TestZapLog2(t *testing.T) {
 }
 
 func TestZapLog3(t *testing.T) {
-	log := NewZapLog(Config{
-		IsStdOut: true,
-		Format:   "json",
-		Encoder:  "c",
-		Level:    "debug",
-	},
+	log := NewZapLogger(
 		WithFilePathOption("/tmp"),
 		WithFileNameOption("aaa"),
-		WithMaxAgeOption(1), // 保留1天内日志
+		WithMaxAgeOption("1d"), // 保留1天内日志
 		WithLogAgeOption(&LogAgeSplitConfig{
 			Suffix:       ".%Y-%m-%d-%H:%M:%S",
 			RotationTime: "3s", // 每小时切割日志
 		}),
-	)
+	).Sugar()
 	log.Infow("infow msg", "kratos", "from")
 	log = log.With("model", "data")
 
@@ -82,5 +71,4 @@ func TestZapLog3(t *testing.T) {
 		log.Warn("warn msg")
 		time.Sleep(time.Second)
 	}
-
 }
