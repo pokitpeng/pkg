@@ -99,7 +99,7 @@ func WithFormatOption(s string) Option {
 // WithEncoderOption 输出格式
 func WithEncoderOption(s string) Option {
 	return func(config *ConfigOption) {
-		config.Format = s
+		config.Encoder = s
 	}
 }
 
