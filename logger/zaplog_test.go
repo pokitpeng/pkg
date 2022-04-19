@@ -72,3 +72,13 @@ func TestZapLog3(t *testing.T) {
 		time.Sleep(time.Second)
 	}
 }
+
+func TestZapLog4(t *testing.T) {
+	log := NewZapLogger(
+		WithFormatOption(FormatJson),
+		WithEncoderOption(EncoderLowercase),
+	).Sugar()
+	log.Infow("infow msg", "kratos", "from")
+	log = log.With("model", "data")
+	log.Infof("info msg")
+}

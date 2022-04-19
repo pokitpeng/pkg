@@ -39,12 +39,12 @@ const (
 )
 
 // Config 必填参数，终端输出基本配置
-//type Config struct {
+// type Config struct {
 //	IsStdOut bool   // 是否输出到控制台
 //	Format   string // json输出还是普通输出
 //	Encoder  string // 输出大小写和颜色
 //	Level    string // 输出日志级别
-//}
+// }
 
 // ConfigOption 选填参数，文件输出配置和appName
 type ConfigOption struct {
@@ -99,7 +99,7 @@ func WithFormatOption(s string) Option {
 // WithEncoderOption 输出格式
 func WithEncoderOption(s string) Option {
 	return func(config *ConfigOption) {
-		config.Format = s
+		config.Encoder = s
 	}
 }
 

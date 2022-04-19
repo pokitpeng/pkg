@@ -1,19 +1,35 @@
 package logger
 
-// 调用栈深度有问题
+import "go.uber.org/zap"
 
-/*import "github.com/go-kratos/kratos/v2/log"
+var helper *zap.SugaredLogger
 
-var helper = NewDevelopLog()
-
-// NewDevelopLogWithoutColor 没有颜色，兼容特殊终端环境
-func NewDevelopLogWithoutColor() *log.Helper {
-	logger := NewLog()
-	return logger
+func init() {
+	if helper == nil {
+		helper = NewZapLogger(WithCallerSkipOption(1)).Sugar()
+	}
 }
 
-func WithoutColor() {
-	helper = NewDevelopLogWithoutColor()
+func GetLogger() *zap.SugaredLogger {
+	return helper
+}
+
+func Init(options ...Option) {
+	helper = NewZapLogger(options...).Sugar()
+}
+
+// WithKV must have key and value
+func WithKV(args ...interface{}) *zap.SugaredLogger {
+	return helper.With(args...)
+}
+
+// WithName only work in FormatConsole setting
+func WithName(name string) *zap.SugaredLogger {
+	return helper.Named(name)
+}
+
+func Sync() error {
+	return helper.Sync()
 }
 
 // =========================================================================
@@ -70,22 +86,22 @@ func Fatalf(format string, a ...interface{}) {
 
 // =========================================================================
 
-func Debugw(keyvals ...interface{}) {
-	helper.Debugw(keyvals...)
+func Debugw(msg string, kvs ...interface{}) {
+	helper.Debugw(msg, kvs...)
 }
 
-func Infow(keyvals ...interface{}) {
-	helper.Infow(keyvals...)
+func Infow(msg string, kvs ...interface{}) {
+	helper.Infow(msg, kvs...)
 }
 
-func Warnw(keyvals ...interface{}) {
-	helper.Warnw(keyvals...)
+func Warnw(msg string, kvs ...interface{}) {
+	helper.Warnw(msg, kvs...)
 }
 
-func Errorw(keyvals ...interface{}) {
-	helper.Errorw(keyvals...)
+func Errorw(msg string, kvs ...interface{}) {
+	helper.Errorw(msg, kvs...)
 }
 
-func Fatalw(keyvals ...interface{}) {
-	helper.Fatalw(keyvals...)
-}*/
+func Fatalw(msg string, kvs ...interface{}) {
+	helper.Fatalw(msg, kvs...)
+}
