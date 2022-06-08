@@ -166,22 +166,22 @@ func withLogAge(option *ConfigOption) io.Writer {
 	logName := path.Join(option.FilePath, option.FileName)
 	rotationTime, err := time.ParseDuration(option.LogAgeSplit.RotationTime)
 	if err != nil {
-		panic("parse log rotationTime err: " + err.Error())
+		panic("parse time err: " + err.Error())
 	}
 	maxAge, err := time.ParseDuration(option.MaxAge)
 	if err != nil {
 		panic(err)
 	}
-	hook, err := rotatelogs.New(
+	writer, err := rotatelogs.New(
 		logName+option.LogAgeSplit.Suffix,
 		rotatelogs.WithLinkName(logName),
 		rotatelogs.WithMaxAge(maxAge),             // 最多保存多久的日志
 		rotatelogs.WithRotationTime(rotationTime), // 每隔多久分割
 	)
 	if err != nil {
-		panic("new rotatelogs writer err: " + err.Error())
+		panic("new writer err: " + err.Error())
 	}
-	return hook
+	return writer
 }
 
 // withLogSize 按照文件大小切割日志
@@ -189,16 +189,16 @@ func withLogSize(option *ConfigOption) io.Writer {
 	logName := path.Join(option.FilePath, option.FileName)
 	maxAge, err := time.ParseDuration(option.MaxAge)
 	if err != nil {
-		panic(err)
+		panic("parse time err: " + err.Error())
 	}
-	hook := lumberjack.Logger{
+	writer := lumberjack.Logger{
 		Filename:   logName,
 		MaxSize:    option.LogSizeSplit.MaxSize,
 		MaxBackups: option.LogSizeSplit.MaxBackups,
 		MaxAge:     int(maxAge.Hours() / 24),
 		Compress:   option.LogSizeSplit.Compress,
 	}
-	return &hook
+	return &writer
 }
 
 // NewZapLogger ...
@@ -216,10 +216,6 @@ func NewZapLogger(settings ...Option) *zap.Logger {
 	// enable option
 	for _, setting := range settings {
 		setting(&configOption)
-	}
-
-	if configOption.LogAgeSplit != nil && configOption.LogSizeSplit != nil {
-		panic("LogAgeSplit and LogSizeSplit can't both set.")
 	}
 
 	var ws []zapcore.WriteSyncer
@@ -267,17 +263,17 @@ func NewZapLogger(settings ...Option) *zap.Logger {
 
 	var level zapcore.Level
 	switch strings.ToLower(configOption.Level) {
-	case "debug":
+	case LevelDebug:
 		level = zapcore.DebugLevel
-	case "info":
+	case LevelInfo:
 		level = zapcore.InfoLevel
-	case "warn":
+	case LevelWarn:
 		level = zapcore.WarnLevel
-	case "error":
+	case LevelError:
 		level = zapcore.ErrorLevel
-	case "fatal":
+	case LevelFatal:
 		level = zapcore.FatalLevel
-	case "panic":
+	case LevelPanic:
 		level = zapcore.PanicLevel
 	default:
 		level = zapcore.InfoLevel
@@ -296,6 +292,10 @@ func NewZapLogger(settings ...Option) *zap.Logger {
 
 	if configOption.IsStdOut {
 		ws = append(ws, os.Stdout)
+	}
+
+	if configOption.LogAgeSplit != nil && configOption.LogSizeSplit != nil {
+		panic("LogAgeSplit and LogSizeSplit can't both set.")
 	}
 
 	if configOption.LogAgeSplit != nil {

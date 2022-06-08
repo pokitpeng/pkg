@@ -26,3 +26,15 @@ func TestDebug(t *testing.T) {
 	l2 := WithName("hello")
 	l2.Info("this is a info msg")
 }
+
+func TestStdLogger(t *testing.T) {
+	InitStandardLogger()
+	Debug("this is debug msg")
+	Info("this is info msg")
+}
+
+func TestDevLogger(t *testing.T) {
+	InitDevelopmentLogger()
+	Debug("this is debug msg")
+	Info("this is info msg")
+}

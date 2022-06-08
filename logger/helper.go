@@ -18,6 +18,22 @@ func Init(options ...Option) {
 	helper = NewZapLogger(options...).Sugar()
 }
 
+func InitStandardLogger() {
+	helper = NewZapLogger(
+		WithEncoderOption(EncoderLowercase),
+		WithFormatOption(FormatJson),
+		WithCallerSkipOption(1),
+	).Sugar()
+}
+
+func InitDevelopmentLogger() {
+	helper = NewZapLogger(
+		WithEncoderOption(EncoderCapitalColor),
+		WithFormatOption(FormatConsole),
+		WithCallerSkipOption(1),
+	).Sugar()
+}
+
 // WithKV must have key and value
 func WithKV(args ...interface{}) *zap.SugaredLogger {
 	return helper.With(args...)
