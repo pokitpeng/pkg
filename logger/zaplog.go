@@ -208,7 +208,7 @@ func NewZapLogger(settings ...Option) *zap.Logger {
 	// default config
 	configOption.IsStdOut = true
 	configOption.Format = FormatConsole
-	configOption.Encoder = EncoderCapitalColor
+	configOption.Encoder = EncoderCapital
 	configOption.Level = LevelDebug
 	configOption.CallerSkip = 0
 	configOption.CallerPath = CallerPathShort

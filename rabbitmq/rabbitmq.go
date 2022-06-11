@@ -1,13 +1,12 @@
 package rabbitmq
 
 import (
-	"github.com/pokitpeng/pkg/logger"
+	log "github.com/pokitpeng/pkg/logger"
 	"github.com/streadway/amqp"
 )
 
 var (
-	MQ  Pool // mq连接池
-	log = logger.NewDevelopLog()
+	MQ Pool // mq连接池
 )
 
 func GetChannel(v interface{}) (*amqp.Channel, error) {

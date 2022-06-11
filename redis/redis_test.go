@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/pokitpeng/pkg/logger"
+	log "github.com/pokitpeng/pkg/logger"
 )
 
 const (
@@ -21,7 +21,6 @@ const (
 
 // Client redis 连接池
 var (
-	log    = logger.NewDevelopLog()
 	ctx    = context.Background()
 	Client *redis.Client
 )

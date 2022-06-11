@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/pokitpeng/pkg/logger"
 	"github.com/streadway/amqp"
 )
 
