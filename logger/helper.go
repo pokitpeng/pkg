@@ -1,6 +1,12 @@
 package logger
 
-import "go.uber.org/zap"
+import (
+	"context"
+
+	"github.com/opentracing/opentracing-go"
+	"github.com/uber/jaeger-client-go"
+	"go.uber.org/zap"
+)
 
 var helper *zap.SugaredLogger
 
@@ -46,6 +52,23 @@ func WithName(name string) *zap.SugaredLogger {
 
 func Sync() error {
 	return helper.Sync()
+}
+
+// =========================================================================
+
+// WithContext 解析context中的trace信息
+func WithContext(ctx context.Context) *zap.SugaredLogger {
+	var traceLog = helper
+	if span := opentracing.SpanFromContext(ctx); span != nil {
+		if jaegerCtx, ok := span.Context().(jaeger.SpanContext); ok {
+			traceLog = helper.With(
+				"trace_id", jaegerCtx.TraceID().String(),
+				"span_id", jaegerCtx.SpanID().String(),
+			)
+			return traceLog
+		}
+	}
+	return helper
 }
 
 // =========================================================================
