@@ -1,4 +1,4 @@
-package struts
+package structs
 
 import "encoding/json"
 
