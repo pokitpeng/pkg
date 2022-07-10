@@ -43,6 +43,18 @@ func MapToStruct(in map[string]interface{}) (dest interface{}, err error) {
 	return dest, nil
 }
 
+func MapToStructWithModel(in map[string]interface{}, model interface{}) (err error) {
+	data, err := json.Marshal(&in)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(data, &model)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func JsonToMap(s string) (m map[string]interface{}, err error) {
 	m = make(map[string]interface{})
 	err = json.Unmarshal([]byte(s), &m)
