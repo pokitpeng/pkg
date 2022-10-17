@@ -44,7 +44,7 @@ func (p *Pipeline) GetStages() []*stage.Stage {
 	return p.stages
 }
 
-func (p *Pipeline) AddStage(desc string, handler stage.Handler, opts ...stage.Option) {
+func (p *Pipeline) AddStage(desc string, handler stage.HandlerStage, opts ...stage.Option) {
 	s := stage.Stage{
 		Desc:              desc,
 		Handler:           handler,

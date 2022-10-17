@@ -10,33 +10,33 @@ import (
 	"github.com/pokitpeng/pkg/concurrent/stage"
 )
 
-var stage1 = func(ctx context.Context) error {
+var stage1 = func(ctx context.Context, s *stage.Stage) error {
 	fmt.Println("i am stage 1")
 	return nil
 }
-var stage2 = func(ctx context.Context) error {
+var stage2 = func(ctx context.Context, s *stage.Stage) error {
 	fmt.Println("i am stage 2")
 	return nil
 }
 
-var stage3Panic = func(ctx context.Context) error {
+var stage3Panic = func(ctx context.Context, s *stage.Stage) error {
 	fmt.Println("i am stage 3")
 	panic("occur panic")
 	return nil
 }
 
-var stage3Error = func(ctx context.Context) error {
+var stage3Error = func(ctx context.Context, s *stage.Stage) error {
 	fmt.Println("i am stage 3")
 	return errors.New("some error")
 }
 
-var stage4 = func(ctx context.Context) error {
+var stage4 = func(ctx context.Context, s *stage.Stage) error {
 	time.Sleep(time.Millisecond * 200)
 	fmt.Println("i am stage 4")
 	return errors.New("some error")
 }
 
-var rollback = func(ctx context.Context) error {
+var rollback = func(ctx context.Context, s *stage.Stage) error {
 	fmt.Println("rollback")
 	return nil
 }
@@ -54,10 +54,11 @@ func TestNewPipeline_Sync_Normal(t *testing.T) {
 func TestNewPipeline_Sync_Error(t *testing.T) {
 	ctx := context.Background()
 	pipeline := New(
-		WithAfterEveryStage(func(ctx context.Context, s *stage.Stage) {
+		WithAfterEveryStage(func(ctx context.Context, s *stage.Stage) error {
 			if s.Error != nil {
 				fmt.Printf("alarm ==> %v error: %v\n", s.Desc, s.Error)
 			}
+			return nil
 		}))
 	pipeline.AddStage("run stage 1", stage1)
 	pipeline.AddStage("run stage 2", stage2)
@@ -72,10 +73,11 @@ func TestNewPipeline_Sync_Error(t *testing.T) {
 func TestNewPipeline_Sync_Panic(t *testing.T) {
 	ctx := context.Background()
 	pipeline := New(
-		WithAfterEveryStage(func(ctx context.Context, s *stage.Stage) {
+		WithAfterEveryStage(func(ctx context.Context, s *stage.Stage) error {
 			if s.Error != nil {
 				fmt.Printf("alarm ==> %v error: %v\n", s.Desc, s.Error)
 			}
+			return nil
 		}))
 	pipeline.AddStage("run stage 1", stage1)
 	pipeline.AddStage("run stage 2", stage2)

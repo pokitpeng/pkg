@@ -83,7 +83,7 @@ func (p *Pool) Run(ctx context.Context) {
 	wg.Wait()
 }
 
-func (p *Pool) AddStage(desc string, h stage.Handler, opts ...stage.Option) {
+func (p *Pool) AddStage(desc string, h stage.HandlerStage, opts ...stage.Option) {
 	s := &stage.Stage{
 		Desc:    desc,
 		Handler: h,

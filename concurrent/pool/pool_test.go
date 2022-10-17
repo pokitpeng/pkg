@@ -12,12 +12,13 @@ import (
 func TestPool_Normal(t *testing.T) {
 	pool := New(
 		WithMaxConcurrent(5),
-		WithAfterEveryStage(func(c context.Context, s *stage.Stage) {
+		WithAfterEveryStage(func(c context.Context, s *stage.Stage) error {
 			if s.Error != nil {
 				fmt.Printf("%s error ==> %v\n", s.Desc, s.Error)
-				return
+				return nil
 			}
 			fmt.Printf("%s success\n", s.Desc)
+			return nil
 		}),
 	)
 
@@ -25,7 +26,7 @@ func TestPool_Normal(t *testing.T) {
 		index := i
 		pool.AddStage(
 			fmt.Sprintf("index %v", i),
-			func(ctx context.Context) error {
+			func(ctx context.Context, s *stage.Stage) error {
 				time.Sleep(time.Millisecond * 500)
 				fmt.Println(fmt.Sprintf("i am worker %d", index))
 				return nil
@@ -39,12 +40,13 @@ func TestPool_Normal(t *testing.T) {
 func TestPool_Panic(t *testing.T) {
 	pool := New(
 		WithMaxConcurrent(5),
-		WithAfterEveryStage(func(c context.Context, s *stage.Stage) {
+		WithAfterEveryStage(func(c context.Context, s *stage.Stage) error {
 			if s.Error != nil {
 				fmt.Printf("%s error ==> %v\n", s.Desc, s.Error)
-				return
+				return nil
 			}
 			fmt.Printf("%s success\n", s.Desc)
+			return nil
 		}),
 	)
 
@@ -53,7 +55,7 @@ func TestPool_Panic(t *testing.T) {
 		if index == 20 {
 			pool.AddStage(
 				fmt.Sprintf("index %v", i),
-				func(ctx context.Context) error {
+				func(ctx context.Context, s *stage.Stage) error {
 					time.Sleep(time.Millisecond * 500)
 					panic("mock panic")
 					fmt.Println(fmt.Sprintf("i am worker %d", index))
@@ -64,7 +66,7 @@ func TestPool_Panic(t *testing.T) {
 		}
 		pool.AddStage(
 			fmt.Sprintf("index %v", i),
-			func(ctx context.Context) error {
+			func(ctx context.Context, s *stage.Stage) error {
 				time.Sleep(time.Millisecond * 500)
 				fmt.Println(fmt.Sprintf("i am worker %d", index))
 				return nil

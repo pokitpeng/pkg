@@ -7,12 +7,12 @@ import (
 )
 
 type Handler func(ctx context.Context) error
-type HandlerStage func(ctx context.Context, s *Stage)
+type HandlerStage func(ctx context.Context, s *Stage) error
 
 type Stage struct {
 	Desc              string       // 描述信息
 	BeforeStage       HandlerStage // 前处理
-	Handler           Handler      // 实际工作函数
+	Handler           HandlerStage // 实际工作函数
 	AfterStage        HandlerStage // 后处理
 	Error             error        // 保存处理过程中出现的错误
 	ContinueWhenError bool         // 出错后是否继续
@@ -48,6 +48,6 @@ func (s *Stage) Run(ctx context.Context) (err error) {
 		}
 		s.Error = err
 	}()
-	err = s.Handler(ctx)
+	err = s.Handler(ctx, s)
 	return err
 }
