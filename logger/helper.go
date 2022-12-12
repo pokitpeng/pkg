@@ -12,7 +12,7 @@ var helper *zap.SugaredLogger
 
 func init() {
 	if helper == nil {
-		helper = NewZapLogger(WithCallerSkipOption(1)).Sugar()
+		helper = NewZapLogger(ConfigWithCallerSkipOption(1)).Sugar()
 	}
 }
 
@@ -26,17 +26,36 @@ func Init(options ...Option) {
 
 func InitStandardLogger() {
 	helper = NewZapLogger(
-		WithEncoderOption(EncoderLowercase),
-		WithFormatOption(FormatJson),
-		WithCallerSkipOption(1),
+		ConfigWithEncoderOption(EncoderLowercase),
+		ConfigWithFormatOption(FormatJson),
+		ConfigWithCallerSkipOption(1),
 	).Sugar()
 }
 
 func InitDevelopmentLogger() {
 	helper = NewZapLogger(
-		WithEncoderOption(EncoderCapitalColor),
-		WithFormatOption(FormatConsole),
-		WithCallerSkipOption(1),
+		ConfigWithEncoderOption(EncoderCapitalColor),
+		ConfigWithFormatOption(FormatConsole),
+		ConfigWithCallerSkipOption(1),
+	).Sugar()
+}
+
+// InitProductionLogger ...
+func InitProductionLogger(logPath, logName string) {
+	helper = NewZapLogger(
+		ConfigWithIsStdOutOption(false),
+		ConfigWithEncoderOption(EncoderLowercase),
+		ConfigWithFormatOption(FormatJson),
+		ConfigWithCallerSkipOption(1),
+		ConfigWithLevelOption(LevelDebug),
+		ConfigWithFilePathOption(logPath),
+		ConfigWithFileNameOption(logName),
+		ConfigWithLogSizeOption(&LogSizeSplitConfig{
+			MaxAge:     "720h",
+			MaxSize:    1,
+			MaxBackups: 60,
+			Compress:   true,
+		}),
 	).Sugar()
 }
 

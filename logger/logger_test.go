@@ -9,11 +9,11 @@ import (
 )
 
 func TestZapLogger3(t *testing.T) {
-	log := log.NewHelper(NewLogger(WithCallerSkipOption(3),
-		WithFilePathOption("./"),
-		WithFileNameOption("aaa"),
-		WithMaxAgeOption("1h"), // 保留1小时内日志
-		WithLogAgeOption(&LogAgeSplitConfig{
+	log := log.NewHelper(NewLogger(ConfigWithCallerSkipOption(3),
+		ConfigWithFilePathOption("./"),
+		ConfigWithFileNameOption("aaa"),
+		ConfigWithLogAgeOption(&LogAgeSplitConfig{
+			MaxAge:       "720h",
 			Suffix:       ".%Y-%m-%d-%H:%M:%S",
 			RotationTime: "1s", // 每秒切割日志
 		})))
@@ -28,7 +28,7 @@ func TestZapLogger3(t *testing.T) {
 }
 
 func TestZapLogger4(t *testing.T) {
-	logger := NewLogger(WithCallerSkipOption(4))
+	logger := NewLogger(ConfigWithCallerSkipOption(4))
 	var traceKey = "trace_id"
 	ctx := context.WithValue(context.Background(), traceKey, "2233")
 	//logger = log.WithContext(ctx, logger)
@@ -40,7 +40,7 @@ func TestZapLogger4(t *testing.T) {
 }
 
 func BenchmarkZapLogger(b *testing.B) {
-	log := log.NewHelper(NewLogger(WithCallerSkipOption(3)))
+	log := log.NewHelper(NewLogger(ConfigWithCallerSkipOption(3)))
 	for i := 0; i < b.N; i++ {
 		log.Debug("hello zap log")
 		log.Info("hello zap log")

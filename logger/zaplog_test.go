@@ -1,11 +1,12 @@
 package logger
 
 import (
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"os"
 	"testing"
 	"time"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func TestZapLog1(t *testing.T) {
@@ -53,10 +54,10 @@ func TestZapLog2(t *testing.T) {
 
 func TestZapLog3(t *testing.T) {
 	log := NewZapLogger(
-		WithFilePathOption("/tmp"),
-		WithFileNameOption("aaa"),
-		WithMaxAgeOption("1d"), // 保留1天内日志
-		WithLogAgeOption(&LogAgeSplitConfig{
+		ConfigWithFilePathOption("/tmp"),
+		ConfigWithFileNameOption("aaa"),
+		ConfigWithLogAgeOption(&LogAgeSplitConfig{
+			MaxAge:       "720h",
 			Suffix:       ".%Y-%m-%d-%H:%M:%S",
 			RotationTime: "3s", // 每小时切割日志
 		}),
@@ -75,8 +76,8 @@ func TestZapLog3(t *testing.T) {
 
 func TestZapLog4(t *testing.T) {
 	log := NewZapLogger(
-		WithFormatOption(FormatJson),
-		WithEncoderOption(EncoderLowercase),
+		ConfigWithFormatOption(FormatJson),
+		ConfigWithEncoderOption(EncoderLowercase),
 	).Sugar()
 	log.Infow("infow msg", "kratos", "from")
 	log = log.With("model", "data")

@@ -23,9 +23,9 @@ func TestDebug(t *testing.T) {
 	Debug("this is a debug msg")
 
 	Init(
-		WithEncoderOption(EncoderLowercase),
-		WithFormatOption(FormatJson),
-		WithCallerSkipOption(1),
+		ConfigWithEncoderOption(EncoderLowercase),
+		ConfigWithFormatOption(FormatJson),
+		ConfigWithCallerSkipOption(1),
 	)
 	Debug("this is a debug msg")
 
@@ -46,6 +46,16 @@ func TestDevLogger(t *testing.T) {
 	InitDevelopmentLogger()
 	Debug("this is debug msg")
 	Info("this is info msg")
+}
+
+func TestProductionLogger(t *testing.T) {
+	InitProductionLogger("./", "test.log")
+	for i := 0; i < 10000; i++ {
+		Debug("this is debug msg")
+		Info("this is info msg")
+		Warn("this is info msg")
+		Error("this is info msg")
+	}
 }
 
 // Set global trace provider
@@ -79,5 +89,5 @@ func TestTraceContext(t *testing.T) {
 	span := opentracing.GlobalTracer().StartSpan("GetFeed")
 	defer span.Finish()
 	newctx := opentracing.ContextWithSpan(ctx, span)
-	WithContext(newctx).Info("with trace info")
+	WithContext(newctx).Info("ConfigWith trace info")
 }
