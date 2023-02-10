@@ -14,8 +14,9 @@ func TestLog(t *testing.T) {
 	Info("info msg")
 	Debug("debug msg")
 
-	Init(ConfigWithEncoder("console"))
+	Init(ConfigWithEncoder("json"))
 
 	Info("info msg")
 	Debug("debug msg")
+
 }

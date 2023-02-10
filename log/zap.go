@@ -3,6 +3,7 @@ package log
 import (
 	"io"
 	"os"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -51,7 +52,7 @@ func ConfigWithWriters(ws []io.Writer) Option {
 func NewLogger(opts ...Option) *zap.SugaredLogger {
 	var config = &config{
 		level:         zapcore.DebugLevel,
-		encoder:       encoderJson,
+		encoder:       encoderConsole,
 		addCallerSkip: 1,
 		writers:       []io.Writer{os.Stdout},
 	}
@@ -69,12 +70,12 @@ func NewLogger(opts ...Option) *zap.SugaredLogger {
 		StacktraceKey:  "Stack",
 		SkipLineEnding: false,
 		LineEnding:     "\n",
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.RFC3339TimeEncoder,
-		// EncodeTime: func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-		// 	enc.AppendString(t.Format("2006-01-02 15:04:05"))
-		// },
-		// EncodeDuration:   zapcore.MillisDurationEncoder,
+		EncodeLevel:    zapcore.CapitalLevelEncoder,
+		// EncodeTime:     zapcore.RFC3339TimeEncoder,
+		EncodeTime: func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+			enc.AppendString(t.Format("2006-01-02 15:04:05.000"))
+		},
+		EncodeDuration:   zapcore.MillisDurationEncoder,
 		EncodeCaller:     zapcore.ShortCallerEncoder,
 		EncodeName:       zapcore.FullNameEncoder,
 		ConsoleSeparator: "  ",
