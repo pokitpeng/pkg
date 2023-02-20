@@ -1,15 +1,17 @@
 package log
 
 import (
+	"io"
+	"os"
 	"testing"
 )
 
 func TestLog(t *testing.T) {
-	// Init(ConfigWithWriters([]io.Writer{
-	// 	os.Stdout,
-	// 	// utils.NewWriterWithAge("./tmp.log", utils.SplitByAgeWithRotationTime("2s")),
-	// 	// utils.NewWriterWithSize("./tmp.log", utils.SplitBySizeWithMaxSize(1)),
-	// }))
+	Init(ConfigWithWriters([]io.Writer{
+		os.Stdout,
+		NewWriterWithAge("./tmp_age.log", SplitByAgeWithRotationTime("2s")),
+		NewWriterWithSize("./tmp_size.log", SplitBySizeWithMaxSize(1)),
+	}))
 
 	Info("info msg")
 	Debug("debug msg")
