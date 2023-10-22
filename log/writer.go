@@ -27,8 +27,6 @@ func NewWriterWithAge(logName string, opts ...SplitByAgeOption) io.Writer {
 		opt(config)
 	}
 
-	fmt.Printf("%+v\n", config)
-
 	writer, err := rotatelogs.New(
 		logName+"."+config.Format+suffix,
 		rotatelogs.WithLinkName(logName+suffix),
