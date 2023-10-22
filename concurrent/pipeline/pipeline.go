@@ -2,37 +2,40 @@ package pipeline
 
 import (
 	"context"
-
+	"fmt"
 	"github.com/pokitpeng/pkg/concurrent/stage"
+	"golang.org/x/sync/semaphore"
+	"sync"
 )
 
 type Pipeline struct {
-	stages           []*stage.Stage
-	beforeEveryStage stage.HandlerStage // 对stage做一些前处理
-	afterEveryStage  stage.HandlerStage // 对stage做一些后处理，一般是错误处理
-	abort            bool               // 退出信号
-	abortedIndex     int                // 需要退出的stages索引
-	// rollback     stage.Stage        // 回滚操作
+	stages       []*stage.Stage
+	abort        bool // 退出信号
+	abortedIndex int  // 需要退出的stages索引
+
+	async         bool // 是否异步并发执行
+	maxConcurrent int
 }
 
 type Option func(p *Pipeline)
 
-// WithBeforeEveryStage 对stage做一些前处理
-func WithBeforeEveryStage(s stage.HandlerStage) Option {
+func WithMaxConcurrent(maxConcurrent int) Option {
 	return func(config *Pipeline) {
-		config.beforeEveryStage = s
+		config.maxConcurrent = maxConcurrent
 	}
 }
 
-// WithAfterEveryStage 对stage做一些后处理，一般是日志操作
-func WithAfterEveryStage(s stage.HandlerStage) Option {
-	return func(config *Pipeline) {
-		config.afterEveryStage = s
-	}
-}
-
-func New(opts ...Option) *Pipeline {
+func NewSync() *Pipeline {
 	p := &Pipeline{abortedIndex: -1}
+	return p
+}
+
+func NewAsync(opts ...Option) *Pipeline {
+	p := &Pipeline{
+		abortedIndex:  -1,
+		async:         true,
+		maxConcurrent: 10, // 默认最大10个并发
+	}
 	for _, opt := range opts {
 		opt(p)
 	}
@@ -44,49 +47,112 @@ func (p *Pipeline) GetStages() []*stage.Stage {
 	return p.stages
 }
 
-func (p *Pipeline) AddStage(desc string, handler stage.HandlerStage, opts ...stage.Option) {
-	s := stage.Stage{
-		Desc:              desc,
-		Handler:           handler,
-		ContinueWhenError: false,
-	}
+func (p *Pipeline) AddStage(s *stage.Stage, opts ...stage.Option) {
 	for _, opt := range opts {
-		opt(&s)
+		opt(s)
 	}
-	p.stages = append(p.stages, &s)
+	p.stages = append(p.stages, s)
 }
 
-// AddRollback 一般用于出错终止stag后使用
-// func (p *Pipeline) AddRollback(desc string, handler stage.Handler) {
-// 	p.rollback = stage.Stage{
-// 		Desc:    desc,
-// 		Handler: handler,
-// 	}
-// }
-
 func (p *Pipeline) Run(ctx context.Context) (err error) {
+	if p.async {
+		if err = p.asyncRun(ctx); err != nil {
+			return err
+		}
+	} else {
+		if err = p.syncRun(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SyncRun 顺序同步执行
+func (p *Pipeline) syncRun(ctx context.Context) (err error) {
 	for i, s := range p.stages {
 		_s := s
-		if err = p.run(ctx, _s); err != nil {
+		if err = _s.Run(ctx); err != nil {
 			p.abort = true
 		}
-		if p.abort && !_s.ContinueWhenError {
+		if p.abort && !_s.ContinueOnError {
 			p.abortedIndex = i
+			// 启动回滚流程
+			for j := i; j >= 0; j-- {
+				rs := p.stages[j]
+				if rs.RollbackFn != nil {
+					if err := rs.Rollback(ctx); err != nil {
+						// error log
+						fmt.Printf("%v\n", err)
+					}
+				}
+			}
 			break
 		} else {
 			p.abort = false
+			p.abortedIndex = -1
 		}
 	}
 	return err
 }
 
-func (p *Pipeline) run(ctx context.Context, s *stage.Stage) (err error) {
-	if s.BeforeStage != nil {
-		s.BeforeStage(ctx, s)
+// AsyncRun 异步并发执行
+func (p *Pipeline) asyncRun(ctx context.Context) (err error) {
+	var wg sync.WaitGroup
+	sem := semaphore.NewWeighted(int64(p.maxConcurrent))
+
+	// 用于处理错误和回滚
+	errChan := make(chan error, len(p.stages))
+	rollbackChan := make(chan int, len(p.stages))
+
+	// 处理退出信号
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	for i, s := range p.stages {
+		_s := s
+
+		// 等待可用的并发资源
+		if err := sem.Acquire(ctx, 1); err != nil {
+			return err
+		}
+
+		wg.Add(1)
+		go func(index int) {
+			defer sem.Release(1)
+			defer wg.Done()
+
+			if runErr := _s.Run(ctx); runErr != nil {
+				errChan <- runErr
+				rollbackChan <- index
+				cancel()
+			}
+		}(i)
 	}
-	err = s.Run(ctx)
-	if p.afterEveryStage != nil {
-		p.afterEveryStage(ctx, s)
+
+	wg.Wait()
+	close(errChan)
+	close(rollbackChan)
+
+	// 处理错误和回滚
+	if len(errChan) > 0 {
+		err = <-errChan
+		p.abort = true
+		p.abortedIndex = <-rollbackChan
+
+		// 启动回滚流程
+		for j := p.abortedIndex; j >= 0; j-- {
+			rs := p.stages[j]
+			if rs.RollbackFn != nil {
+				if rollbackErr := rs.Rollback(ctx); rollbackErr != nil {
+					// error log
+					fmt.Printf("%v\n", rollbackErr)
+				}
+			}
+		}
+	} else {
+		p.abort = false
+		p.abortedIndex = -1
 	}
+
 	return err
 }
