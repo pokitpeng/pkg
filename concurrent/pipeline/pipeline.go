@@ -3,9 +3,10 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/pokitpeng/pkg/concurrent/stage"
 	"golang.org/x/sync/semaphore"
-	"sync"
 )
 
 type Pipeline struct {

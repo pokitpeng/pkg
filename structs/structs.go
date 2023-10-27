@@ -15,7 +15,7 @@ func StructToMap(s interface{}) (out map[string]interface{}, err error) {
 	if err != nil {
 		return nil, err
 	}
-	var m = make(map[string]interface{})
+	m := make(map[string]interface{})
 	err = json.Unmarshal(data, &m)
 	if err != nil {
 		return m, err

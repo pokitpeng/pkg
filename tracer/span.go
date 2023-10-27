@@ -24,7 +24,7 @@ func StartSpan(ctx context.Context, spanName string, opts ...trace.SpanStartOpti
 	ctx, span := otel.GetTracerProvider().Tracer(TraceName).Start(ctx,
 		spanName,
 		opts...,
-		// otel_trace.WithSpanKind(otel_trace.SpanKindClient),
+	// otel_trace.WithSpanKind(otel_trace.SpanKindClient),
 	)
 	// span.SetAttributes(attribute.Key(key).String(value))
 

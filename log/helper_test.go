@@ -20,5 +20,21 @@ func TestLog(t *testing.T) {
 
 	Info("info msg")
 	Debug("debug msg")
+}
 
+func TestLogPanic(t *testing.T) {
+	Init(ConfigWithWriters([]io.Writer{
+		os.Stdout,
+	}))
+
+	Info("info msg")
+	Debug("debug msg")
+
+	// Panicln("panic msg")
+	DPanicln("dpanic msg")
+
+	Init(ConfigWithEncoder("json"))
+
+	Info("info msg")
+	Debug("debug msg")
 }

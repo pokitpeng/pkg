@@ -76,7 +76,7 @@ func (c *Client) Pull(remote, local string) error {
 		return err
 	}
 
-	localFile, err := os.OpenFile(local, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	localFile, err := os.OpenFile(local, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		return err
 	}

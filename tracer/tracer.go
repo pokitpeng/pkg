@@ -15,17 +15,16 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-var (
-	TraceName = "tracer-example"
-)
+var TraceName = "tracer-example"
 
 func SetupTraceName(s string) {
 	TraceName = s
 }
 
 // SetupProvider
-// 		eg: provider url http://127.0.0.1:14268/api/traces
-// 		eg: web url http://127.0.0.1:16686
+//
+//	eg: provider url http://127.0.0.1:14268/api/traces
+//	eg: web url http://127.0.0.1:16686
 func SetupProvider(providerUrl, serviceName string, sample float64, attrs ...attribute.KeyValue) (*trace_sdk.TracerProvider, error) {
 	// Create the Jaeger exporter
 	exp, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(providerUrl)))
@@ -87,7 +86,8 @@ func Inject(ctx context.Context, p propagation.TextMapPropagator, metadata *meta
 
 // Extract extracts the metadata from ctx.
 func Extract(ctx context.Context, p propagation.TextMapPropagator, metadata *metadata.MD) (
-	baggage.Baggage, otel_trace.SpanContext) {
+	baggage.Baggage, otel_trace.SpanContext,
+) {
 	ctx = p.Extract(ctx, &metadataSupplier{
 		metadata: metadata,
 	})

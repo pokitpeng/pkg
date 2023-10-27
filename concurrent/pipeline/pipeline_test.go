@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/pokitpeng/pkg/concurrent/stage"
 	"testing"
 	"time"
+
+	"github.com/pokitpeng/pkg/concurrent/stage"
 )
 
 var stage1 = stage.New(

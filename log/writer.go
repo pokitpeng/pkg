@@ -17,7 +17,7 @@ func NewWriterWithAge(logName string, opts ...SplitByAgeOption) io.Writer {
 		logName, _, _ = strings.Cut(logName, suffix)
 	}
 
-	var config = &SplitByAgeConfig{
+	config := &SplitByAgeConfig{
 		Format:       "%Y-%m-%dT%H:%M:%S",
 		MaxAge:       time.Hour * 24 * 60,
 		RotationTime: time.Hour * 24,
@@ -79,7 +79,7 @@ func NewWriterWithSize(logName string, opts ...SplitBySizeOption) io.Writer {
 		logName, _, _ = strings.Cut(logName, suffix)
 	}
 
-	var config = &SplitBySizeConfig{
+	config := &SplitBySizeConfig{
 		MaxSize:    200,
 		MaxBackups: 5,
 		MaxAge:     60,

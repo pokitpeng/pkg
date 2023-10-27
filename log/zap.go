@@ -50,7 +50,7 @@ func ConfigWithWriters(ws []io.Writer) Option {
 }
 
 func NewLogger(opts ...Option) *zap.SugaredLogger {
-	var config = &config{
+	config := &config{
 		level:         zapcore.DebugLevel,
 		encoder:       encoderConsole,
 		addCallerSkip: 1,

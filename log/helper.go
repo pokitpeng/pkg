@@ -86,6 +86,14 @@ func Fatal(args ...interface{}) {
 	helper.Fatal(args...)
 }
 
+func DPanic(args ...interface{}) {
+	helper.DPanic(args...)
+}
+
+func Panic(args ...interface{}) {
+	helper.Panic(args...)
+}
+
 // =========================================================================
 
 func Debugf(format string, a ...interface{}) {
@@ -112,6 +120,14 @@ func Fatalf(format string, a ...interface{}) {
 	helper.Fatalf(format, a...)
 }
 
+func DPanicf(format string, a ...interface{}) {
+	helper.DPanicf(format, a...)
+}
+
+func Panicf(format string, a ...interface{}) {
+	helper.Panicf(format, a...)
+}
+
 // =========================================================================
 
 func Debugw(msg string, kvs ...interface{}) {
@@ -134,6 +150,14 @@ func Fatalw(msg string, kvs ...interface{}) {
 	helper.Fatalw(msg, kvs...)
 }
 
+func DPanicw(msg string, kvs ...interface{}) {
+	helper.DPanicw(msg, kvs...)
+}
+
+func Panicw(msg string, kvs ...interface{}) {
+	helper.Panicw(msg, kvs...)
+}
+
 // =========================================================================
 
 func Debugln(args ...interface{}) {
@@ -154,4 +178,12 @@ func Errorln(args ...interface{}) {
 
 func Fatalln(args ...interface{}) {
 	helper.Fatalln(args...)
+}
+
+func DPanicln(args ...interface{}) {
+	helper.DPanicln(args...)
+}
+
+func Panicln(args ...interface{}) {
+	helper.Panicln(args...)
 }
