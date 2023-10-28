@@ -12,8 +12,8 @@ import (
 type Encoder string
 
 const (
-	encoderJson    Encoder = "json"
-	encoderConsole Encoder = "console"
+	EncoderJson    Encoder = "json"
+	EncoderConsole Encoder = "console"
 )
 
 type Option func(*config)
@@ -52,7 +52,7 @@ func ConfigWithWriters(ws []io.Writer) Option {
 func NewLogger(opts ...Option) *zap.SugaredLogger {
 	config := &config{
 		level:         zapcore.DebugLevel,
-		encoder:       encoderConsole,
+		encoder:       EncoderConsole,
 		addCallerSkip: 1,
 		writers:       []io.Writer{os.Stdout},
 	}
@@ -82,7 +82,7 @@ func NewLogger(opts ...Option) *zap.SugaredLogger {
 	}
 
 	var encoding zapcore.Encoder
-	if config.encoder == encoderConsole {
+	if config.encoder == EncoderConsole {
 		encoding = zapcore.NewConsoleEncoder(encoderConfig)
 	} else {
 		encoding = zapcore.NewJSONEncoder(encoderConfig)
